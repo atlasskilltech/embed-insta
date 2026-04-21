@@ -3,6 +3,61 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 
+const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+const SCHEMA_FILE = path.join(__dirname, 'schema.sql');
+const MIGRATIONS_TABLE = 'schema_migrations';
+
+async function ensureDatabase({ host, port, user, password, database }) {
+  const rootConn = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    multipleStatements: true,
+  });
+  await rootConn.query(
+    `CREATE DATABASE IF NOT EXISTS \`${database}\`
+     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+  );
+  await rootConn.end();
+}
+
+async function ensureMigrationsTable(conn) {
+  await conn.query(
+    `CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
+       filename   VARCHAR(255) NOT NULL,
+       applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       PRIMARY KEY (filename)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+}
+
+function listMigrationFiles() {
+  if (!fs.existsSync(MIGRATIONS_DIR)) return [];
+  return fs
+    .readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+}
+
+async function getApplied(conn) {
+  const [rows] = await conn.query(
+    `SELECT filename FROM ${MIGRATIONS_TABLE}`
+  );
+  return new Set(rows.map((r) => r.filename));
+}
+
+async function applyMigration(conn, filename) {
+  const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, filename), 'utf8');
+  if (sql.trim()) {
+    await conn.query(sql);
+  }
+  await conn.execute(
+    `INSERT INTO ${MIGRATIONS_TABLE} (filename) VALUES (:filename)`,
+    { filename }
+  );
+}
+
 async function migrate() {
   const {
     DB_HOST = '127.0.0.1',
@@ -12,63 +67,51 @@ async function migrate() {
     DB_NAME = 'embed_insta',
   } = process.env;
 
-  const rootConn = await mysql.createConnection({
-    host: DB_HOST,
-    port: Number(DB_PORT),
-    user: DB_USER,
-    password: DB_PASSWORD,
-    multipleStatements: true,
-  });
-
-  await rootConn.query(
-    `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-  );
-  await rootConn.end();
-
-  const conn = await mysql.createConnection({
+  const dbConfig = {
     host: DB_HOST,
     port: Number(DB_PORT),
     user: DB_USER,
     password: DB_PASSWORD,
     database: DB_NAME,
+  };
+
+  await ensureDatabase(dbConfig);
+
+  const conn = await mysql.createConnection({
+    ...dbConfig,
     multipleStatements: true,
+    namedPlaceholders: true,
   });
 
-  const [renameRows] = await conn.query(
-    `SELECT
-       SUM(CASE WHEN table_name = 'admin_users' THEN 1 ELSE 0 END) AS old_exists,
-       SUM(CASE WHEN table_name = 'embed_users' THEN 1 ELSE 0 END) AS new_exists
-     FROM information_schema.tables
-     WHERE table_schema = ?`,
-    [DB_NAME]
-  );
-  const { old_exists, new_exists } = renameRows[0] || {};
-  if (Number(old_exists) && !Number(new_exists)) {
-    console.log('[migrate] renaming admin_users -> embed_users');
-    await conn.query('RENAME TABLE admin_users TO embed_users');
-  }
+  try {
+    await ensureMigrationsTable(conn);
 
-  const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  await conn.query(sql);
+    // Run migrations first: they may rename legacy tables or add columns
+    // on existing databases. Each file is idempotent and tolerates the
+    // target table not existing yet (fresh installs will run them as
+    // no-ops and schema.sql below will create tables with the new
+    // columns already in place).
+    const files = listMigrationFiles();
+    const applied = await getApplied(conn);
+    const pending = files.filter((f) => !applied.has(f));
 
-  async function ensureColumn(table, column, definition) {
-    const [rows] = await conn.query(
-      `SELECT COUNT(*) AS c FROM information_schema.columns
-       WHERE table_schema = ? AND table_name = ? AND column_name = ?`,
-      [DB_NAME, table, column]
-    );
-    if (!Number(rows[0].c)) {
-      console.log(`[migrate] adding ${table}.${column}`);
-      await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
+    if (pending.length) {
+      for (const filename of pending) {
+        console.log(`[migrate] applying ${filename}`);
+        await applyMigration(conn, filename);
+      }
+    } else {
+      console.log('[migrate] no pending migrations');
     }
+
+    console.log('[migrate] applying schema.sql');
+    const baseSql = fs.readFileSync(SCHEMA_FILE, 'utf8');
+    await conn.query(baseSql);
+
+    console.log(`[migrate] database "${DB_NAME}" ready`);
+  } finally {
+    await conn.end();
   }
-
-  await ensureColumn('widget_settings', 'title', 'title VARCHAR(128) NULL AFTER name');
-  await ensureColumn('widget_settings', 'targets_json', 'targets_json TEXT NULL AFTER title');
-
-  await conn.end();
-
-  console.log(`[migrate] database "${DB_NAME}" ready`);
 }
 
 migrate().catch((err) => {

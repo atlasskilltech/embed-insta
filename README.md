@@ -63,6 +63,13 @@ curl -X POST http://localhost:3000/api/instagram/fetch \
 
 ## Database
 
+Two kinds of SQL live under `db/`:
+
+- `db/schema.sql` — the full current schema (idempotent, all `CREATE TABLE IF NOT EXISTS`). Running `npm run migrate` always ends by applying this file so fresh installs get the current shape.
+- `db/migrations/NNN_description.sql` — versioned upgrade files applied once and tracked in the `schema_migrations` table. Run *before* `schema.sql` so they can rename legacy tables or add columns on existing databases before the baseline would no-op them.
+
+Each migration file should be idempotent (guard `ALTER`/`RENAME` with an `information_schema` check so fresh installs and already-upgraded databases both succeed as no-ops). New upgrades: drop a numbered `.sql` file into `db/migrations/` and `npm run migrate`.
+
 Two tables: `instagram_posts` and `instagram_media`. See `db/schema.sql`.
 
 ## Media storage
