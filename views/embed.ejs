@@ -35,12 +35,26 @@
         if (altText.length > 80) altText = altText.slice(0, 80) + '…';
         if (!altText) altText = '@' + (post.username || 'post');
       %>
-      <% if (first && first.media_type === 'video' && first.local_url) { %>
-        <video controls playsinline preload="metadata" poster="<%= first.local_thumbnail_url || '' %>">
-          <source src="<%= first.local_url %>" />
+      <%
+        const videoSrc = first
+          ? first.local_url || (first.media_type === 'video' ? first.proxy_url : null)
+          : null;
+        const posterSrc = first
+          ? first.local_thumbnail_url || first.proxy_thumbnail_url || ''
+          : '';
+        const imgSrc = first
+          ? first.local_url ||
+            first.local_thumbnail_url ||
+            first.proxy_thumbnail_url ||
+            first.proxy_url
+          : null;
+      %>
+      <% if (first && first.media_type === 'video' && videoSrc) { %>
+        <video controls playsinline preload="metadata" poster="<%= posterSrc %>">
+          <source src="<%= videoSrc %>" />
         </video>
-      <% } else if (first && (first.local_url || first.local_thumbnail_url)) { %>
-        <img src="<%= first.local_url || first.local_thumbnail_url %>" alt="<%= altText %>" />
+      <% } else if (imgSrc) { %>
+        <img src="<%= imgSrc %>" alt="<%= altText %>" />
       <% } else { %>
         <div class="widget-placeholder widget-placeholder--gradient">
           <span><%= (post.username || '?').slice(0, 1).toUpperCase() %></span>

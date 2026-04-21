@@ -51,11 +51,15 @@
     if (!cover) return placeholderTile(post);
 
     var initial = (post.username || '?').slice(0, 1).toUpperCase();
-    // The grid is a preview, always render a still image. Videos use
-    // the locally-mirrored poster (falls back to the first image frame
-    // for image posts that deduped thumbnail and primary into one
-    // file). No CDN URLs leak to the browser.
-    var src = cover.local_thumbnail_url || cover.local_url;
+    // The grid is a preview, always render a still image. Prefer the
+    // locally-mirrored thumbnail, fall through to the server-side
+    // proxy so production (no local mirror) still shows something.
+    // No Instagram CDN URL leaks to the browser either way.
+    var src =
+      cover.local_thumbnail_url ||
+      cover.local_url ||
+      cover.proxy_thumbnail_url ||
+      cover.proxy_url;
     if (!src) return placeholderTile(post);
 
     var alt = shortAlt(cover.alt_text, post.username);
@@ -307,14 +311,17 @@
     if (!items.length) return '<div class="post-modal__media">' + placeholderTile(post) + '</div>';
     var m = items[galleryIndex] || items[0];
     var inner;
-    if (m.media_type === 'video' && m.local_url) {
+    var videoSrc = m.local_url || (m.media_type === 'video' ? m.proxy_url : null);
+    var poster = m.local_thumbnail_url || m.proxy_thumbnail_url || '';
+    if (m.media_type === 'video' && videoSrc) {
       inner = '<video controls playsinline preload="metadata" poster="' +
-        escapeHtml(m.local_thumbnail_url || '') + '">' +
-        '<source src="' + escapeHtml(m.local_url) + '" /></video>';
+        escapeHtml(poster) + '">' +
+        '<source src="' + escapeHtml(videoSrc) + '" /></video>';
     } else {
       // Image post, or video whose mp4 is missing: fall back to the
-      // mirrored still image so the modal always renders something.
-      var src = m.local_url || m.local_thumbnail_url;
+      // mirrored still, then the proxy, so the modal always renders.
+      var src =
+        m.local_url || m.local_thumbnail_url || m.proxy_thumbnail_url || m.proxy_url;
       if (!src) {
         inner = placeholderTile(post);
       } else {

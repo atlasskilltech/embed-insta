@@ -19,19 +19,20 @@
       const initial = (post.username || '?').slice(0, 1).toUpperCase();
     %>
     <% post.media.forEach(function(m) { %>
-      <% if (m.media_type === 'video' && m.local_url) { %>
-        <video controls playsinline preload="metadata" poster="<%= m.local_thumbnail_url || '' %>">
-          <source src="<%= m.local_url %>" />
+      <%
+        const videoSrc = m.local_url || (m.media_type === 'video' ? m.proxy_url : null);
+        const posterSrc = m.local_thumbnail_url || m.proxy_thumbnail_url || '';
+        const imgSrc =
+          m.local_url || m.local_thumbnail_url || m.proxy_thumbnail_url || m.proxy_url;
+      %>
+      <% if (m.media_type === 'video' && videoSrc) { %>
+        <video controls playsinline preload="metadata" poster="<%= posterSrc %>">
+          <source src="<%= videoSrc %>" />
         </video>
+      <% } else if (imgSrc) { %>
+        <img src="<%= imgSrc %>" alt="<%= m.alt_text || '' %>" data-fallback-initial="<%= initial %>" />
       <% } else { %>
-        <%
-          const src = m.local_url || m.local_thumbnail_url;
-        %>
-        <% if (src) { %>
-          <img src="<%= src %>" alt="<%= m.alt_text || '' %>" data-fallback-initial="<%= initial %>" />
-        <% } else { %>
-          <div class="placeholder placeholder--gradient"><span><%= initial %></span></div>
-        <% } %>
+        <div class="placeholder placeholder--gradient"><span><%= initial %></span></div>
       <% } %>
     <% }) %>
   </div>
