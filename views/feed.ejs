@@ -1,0 +1,47 @@
+<%- include('partials/header') %>
+
+<section class="feed-header">
+  <h1><%= username ? '@' + username : 'Latest Posts' %></h1>
+  <p class="muted"><%= total %> post<%= total === 1 ? '' : 's' %></p>
+</section>
+
+<% if (!posts.length) { %>
+  <p class="empty">No posts yet. Trigger a fetch via <code>POST /api/instagram/fetch</code>.</p>
+<% } %>
+
+<div class="grid">
+  <% posts.forEach(function(post) { %>
+    <a class="card" href="/post/<%= post.post_id %>">
+      <div class="thumb">
+        <% const cover = post.media[0]; %>
+        <% if (cover) { %>
+          <% if (cover.media_type === 'video') { %>
+            <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
+              <source src="<%= cover.local_url || cover.media_url %>" />
+            </video>
+          <% } else { %>
+            <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="" />
+          <% } %>
+          <% if (post.post_type === 'carousel') { %><span class="badge">&#x25A3;</span><% } %>
+          <% if (post.post_type === 'video') { %><span class="badge">&#9658;</span><% } %>
+        <% } else { %>
+          <div class="placeholder"></div>
+        <% } %>
+      </div>
+      <div class="meta">
+        <strong>@<%= post.username || 'unknown' %></strong>
+        <span><%= post.likes_count %> likes &middot; <%= post.comments_count %> comments</span>
+      </div>
+    </a>
+  <% }) %>
+</div>
+
+<% if (totalPages > 1) { %>
+  <nav class="pagination">
+    <% if (page > 1) { %><a href="?page=<%= page - 1 %>&pageSize=<%= pageSize %><%= username ? '&username=' + username : '' %>">&larr; Prev</a><% } %>
+    <span>Page <%= page %> of <%= totalPages %></span>
+    <% if (page < totalPages) { %><a href="?page=<%= page + 1 %>&pageSize=<%= pageSize %><%= username ? '&username=' + username : '' %>">Next &rarr;</a><% } %>
+  </nav>
+<% } %>
+
+<%- include('partials/footer') %>

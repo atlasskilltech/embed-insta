@@ -1,0 +1,42 @@
+<%- include('partials/header') %>
+
+<article class="post-detail">
+  <header class="post-head">
+    <h1>@<%= post.username || 'unknown' %></h1>
+    <% if (post.posted_at) { %><time><%= post.posted_at %></time><% } %>
+  </header>
+
+  <div class="post-media">
+    <% post.media.forEach(function(m) { %>
+      <% if (m.media_type === 'video') { %>
+        <video controls playsinline preload="metadata" poster="<%= m.thumbnail_url || '' %>">
+          <source src="<%= m.local_url || m.media_url %>" />
+        </video>
+      <% } else { %>
+        <img src="<%= m.local_url || m.media_url %>" alt="" />
+      <% } %>
+    <% }) %>
+  </div>
+
+  <% if (post.caption) { %>
+    <p class="caption"><%= post.caption %></p>
+  <% } %>
+
+  <dl class="stats">
+    <div><dt>Likes</dt><dd><%= post.likes_count %></dd></div>
+    <div><dt>Comments</dt><dd><%= post.comments_count %></dd></div>
+    <div><dt>Type</dt><dd><%= post.post_type %></dd></div>
+  </dl>
+
+  <div class="actions">
+    <% if (post.permalink) { %><a class="btn" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a><% } %>
+    <a class="btn btn-secondary" href="<%= post.embed_url %>" target="_blank">Open Embed</a>
+  </div>
+
+  <section class="embed-code">
+    <h3>Embed code</h3>
+    <pre><code>&lt;iframe src="<%= post.embed_url %>" width="540" height="720" frameborder="0" scrolling="no"&gt;&lt;/iframe&gt;</code></pre>
+  </section>
+</article>
+
+<%- include('partials/footer') %>

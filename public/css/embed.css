@@ -1,0 +1,76 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #262626;
+}
+
+.embed-body {
+  padding: 8px;
+}
+
+.embed-card {
+  max-width: 540px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.embed-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #efefef;
+}
+
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.who strong { display: block; font-size: 14px; }
+.who span { color: #8e8e8e; font-size: 12px; }
+
+.embed-media { background: #000; }
+.embed-media img, .embed-media video {
+  display: block;
+  width: 100%;
+  max-height: 540px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+.embed-foot { padding: 12px 14px 16px; }
+
+.embed-foot .stats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.embed-foot .caption {
+  font-size: 14px;
+  white-space: pre-wrap;
+  margin: 0 0 12px;
+  max-height: 120px;
+  overflow: hidden;
+}
+
+.view-link {
+  color: #0095f6;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
