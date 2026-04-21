@@ -98,9 +98,27 @@ body {
   display: block;
 }
 
-.thumb .placeholder {
+.thumb .placeholder,
+.post-media .placeholder {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #eee, #ccc);
-  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  font-size: clamp(28px, 6vw, 56px);
+  letter-spacing: 0.5px;
+}
+
+.placeholder--gradient {
+  background: linear-gradient(135deg, #f58529 0%, #dd2a7b 50%, #515bd4 100%);
+}
+
+.post-media .placeholder {
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
 }
 
 .badge {

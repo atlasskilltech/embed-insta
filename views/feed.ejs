@@ -11,21 +11,19 @@
 
 <div class="grid">
   <% posts.forEach(function(post) { %>
+    <%
+      const cover = post.media[0];
+      const coverSrc = cover ? (cover.local_thumbnail_url || cover.local_url) : null;
+      const initial = (post.username || '?').slice(0, 1).toUpperCase();
+    %>
     <a class="card" href="/post/<%= post.post_id %>">
       <div class="thumb">
-        <% const cover = post.media[0]; %>
-        <% if (cover) { %>
-          <% if (cover.media_type === 'video') { %>
-            <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
-              <source src="<%= cover.local_url || cover.media_url %>" />
-            </video>
-          <% } else { %>
-            <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="" />
-          <% } %>
+        <% if (coverSrc) { %>
+          <img loading="lazy" src="<%= coverSrc %>" alt="" data-fallback-initial="<%= initial %>" />
           <% if (post.post_type === 'carousel') { %><span class="badge">&#x25A3;</span><% } %>
           <% if (post.post_type === 'video') { %><span class="badge">&#9658;</span><% } %>
         <% } else { %>
-          <div class="placeholder"></div>
+          <div class="placeholder placeholder--gradient"><span><%= initial %></span></div>
         <% } %>
       </div>
       <div class="meta">
@@ -35,6 +33,28 @@
     </a>
   <% }) %>
 </div>
+
+<script>
+  (function () {
+    document.addEventListener(
+      'error',
+      function (e) {
+        var t = e.target;
+        if (!t || t.tagName !== 'IMG' || !t.closest) return;
+        var thumb = t.closest('.thumb');
+        if (!thumb) return;
+        var initial = (t.dataset && t.dataset.fallbackInitial) || '?';
+        var ph = document.createElement('div');
+        ph.className = 'placeholder placeholder--gradient';
+        var span = document.createElement('span');
+        span.textContent = initial;
+        ph.appendChild(span);
+        t.parentNode.replaceChild(ph, t);
+      },
+      true
+    );
+  })();
+</script>
 
 <% if (totalPages > 1) { %>
   <nav class="pagination">
