@@ -24,7 +24,7 @@
             <source src="<%= first.local_url || first.media_url %>" />
           </video>
         <% } else { %>
-          <img src="<%= first.local_url || first.media_url %>" alt="" />
+          <img src="<%= first.local_url || first.media_url %>" alt="<%= first.alt_text || '' %>" />
         <% } %>
       <% } %>
     </div>
@@ -33,9 +33,13 @@
       <div class="stats">
         <span>&hearts; <%= post.likes_count %></span>
         <span>&#128172; <%= post.comments_count %></span>
+        <% if (post.video_view_count) { %><span>&#128065; <%= post.video_view_count.toLocaleString() %></span><% } %>
       </div>
       <% if (post.caption) { %>
         <p class="caption"><%= post.caption %></p>
+      <% } %>
+      <% if (post.location) { %>
+        <p class="location">&#128205; <%= post.location.name %></p>
       <% } %>
       <% if (post.permalink) { %>
         <a class="view-link" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a>

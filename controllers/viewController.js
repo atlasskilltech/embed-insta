@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const Media = require('../models/Media');
+const Comment = require('../models/Comment');
 const config = require('../config');
 const { postToPublic } = require('./apiController');
 
@@ -32,10 +33,13 @@ async function postDetail(req, res, next) {
   try {
     const post = await Post.findByPostId(req.params.postId);
     if (!post) return res.status(404).render('404', { title: 'Not found' });
-    const media = await Media.findByPostId(post.post_id);
+    const [media, comments] = await Promise.all([
+      Media.findByPostId(post.post_id),
+      Comment.findByPostId(post.post_id),
+    ]);
     res.render('post', {
       title: post.username ? `@${post.username}` : 'Post',
-      post: postToPublic(post, media),
+      post: postToPublic(post, media, comments),
       baseUrl: config.baseUrl,
     });
   } catch (err) {

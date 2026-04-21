@@ -3,6 +3,7 @@ const { normalizeBatch } = require('./normalizer');
 const { downloadMedia } = require('./mediaService');
 const Post = require('../models/Post');
 const Media = require('../models/Media');
+const Comment = require('../models/Comment');
 
 async function ingest(options = {}) {
   const { items } = await runScraper(options);
@@ -11,8 +12,9 @@ async function ingest(options = {}) {
   let savedPosts = 0;
   let savedMedia = 0;
   let downloadedMedia = 0;
+  let savedComments = 0;
 
-  for (const { post, media } of normalized) {
+  for (const { post, media, comments } of normalized) {
     try {
       await Post.upsertPost(post);
       savedPosts += 1;
@@ -30,15 +32,17 @@ async function ingest(options = {}) {
           });
           if (local) downloadedMedia += 1;
         }
-        enriched.push({
-          ...m,
-          local_path: local ? local.local_path : null,
-        });
+        enriched.push({ ...m, local_path: local ? local.local_path : null });
       }
 
       if (enriched.length) {
         await Media.replaceForPost(post.post_id, enriched);
         savedMedia += enriched.length;
+      }
+
+      if (Array.isArray(comments) && comments.length) {
+        await Comment.replaceForPost(post.post_id, comments);
+        savedComments += comments.length;
       }
     } catch (err) {
       console.error(
@@ -53,6 +57,7 @@ async function ingest(options = {}) {
     savedPosts,
     savedMedia,
     downloadedMedia,
+    savedComments,
   };
   console.log('[ingest] summary:', summary);
   return summary;

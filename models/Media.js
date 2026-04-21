@@ -11,16 +11,21 @@ async function replaceForPost(postId, mediaItems) {
     for (const m of mediaItems) {
       await conn.execute(
         `INSERT INTO instagram_media
-           (post_id, position, media_type, media_url, local_path, thumbnail_url, width, height)
+           (post_id, position, child_post_id, child_shortcode, media_type,
+            media_url, local_path, thumbnail_url, alt_text, width, height)
          VALUES
-           (:post_id, :position, :media_type, :media_url, :local_path, :thumbnail_url, :width, :height)`,
+           (:post_id, :position, :child_post_id, :child_shortcode, :media_type,
+            :media_url, :local_path, :thumbnail_url, :alt_text, :width, :height)`,
         {
           post_id: postId,
           position: m.position || 0,
+          child_post_id: m.child_post_id || null,
+          child_shortcode: m.child_shortcode || null,
           media_type: m.media_type,
           media_url: m.media_url,
           local_path: m.local_path || null,
           thumbnail_url: m.thumbnail_url || null,
+          alt_text: m.alt_text || null,
           width: m.width || null,
           height: m.height || null,
         }

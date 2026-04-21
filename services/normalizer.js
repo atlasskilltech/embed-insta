@@ -11,39 +11,123 @@ function parseDate(value) {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+function toInt(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toBool(value) {
+  if (value === true || value === 1 || value === '1') return 1;
+  return 0;
+}
+
 function pickType(item) {
-  const t = (item.type || item.productType || '').toString().toLowerCase();
-  if (t.includes('video')) return 'video';
-  if (t.includes('sidecar') || t.includes('carousel')) return 'carousel';
-  if (t.includes('image')) return 'image';
+  const raw = String(item.type || item.productType || '').toLowerCase();
+  if (raw === 'sidecar' || raw.includes('carousel')) return 'carousel';
+  if (raw === 'video' || raw.includes('video') || raw === 'clips') return 'video';
+  if (raw === 'image' || raw.includes('image')) return 'image';
   if (Array.isArray(item.childPosts) && item.childPosts.length > 0) return 'carousel';
   if (item.videoUrl) return 'video';
   return 'image';
 }
 
+function mediaFromChild(child, position) {
+  const isVideo = Boolean(child.videoUrl);
+  const url = isVideo ? child.videoUrl : child.displayUrl || child.imageUrl || child.url;
+  if (!url) return null;
+  return {
+    position,
+    child_post_id: child.id ? String(child.id) : null,
+    child_shortcode: child.shortCode || child.shortcode || null,
+    media_type: isVideo ? 'video' : 'image',
+    media_url: url,
+    thumbnail_url: child.displayUrl || null,
+    alt_text: child.alt || null,
+    width: child.dimensionsWidth || child.width || null,
+    height: child.dimensionsHeight || child.height || null,
+  };
+}
+
 function collectMedia(item) {
-  const media = [];
-  const children = Array.isArray(item.childPosts) && item.childPosts.length
-    ? item.childPosts
-    : [item];
+  const out = [];
 
-  children.forEach((child, i) => {
-    const isVideo = Boolean(child.videoUrl) || /video/i.test(child.type || '');
-    const url = isVideo
-      ? child.videoUrl || child.displayUrl
-      : child.displayUrl || child.imageUrl || child.url;
-    if (!url) return;
-    media.push({
-      position: i,
-      media_type: isVideo ? 'video' : 'image',
-      media_url: url,
-      thumbnail_url: child.displayUrl || null,
-      width: child.dimensionsWidth || child.width || null,
-      height: child.dimensionsHeight || child.height || null,
+  if (Array.isArray(item.childPosts) && item.childPosts.length > 0) {
+    item.childPosts.forEach((child, i) => {
+      const m = mediaFromChild(child, i);
+      if (m) out.push(m);
     });
-  });
+    return out;
+  }
 
-  return media;
+  const isVideo = Boolean(item.videoUrl);
+  const primary = isVideo ? item.videoUrl : item.displayUrl;
+  if (primary) {
+    out.push({
+      position: 0,
+      child_post_id: null,
+      child_shortcode: null,
+      media_type: isVideo ? 'video' : 'image',
+      media_url: primary,
+      thumbnail_url: item.displayUrl || null,
+      alt_text: item.alt || null,
+      width: item.dimensionsWidth || null,
+      height: item.dimensionsHeight || null,
+    });
+  }
+
+  if (!isVideo && Array.isArray(item.images) && item.images.length > 1) {
+    item.images.slice(1).forEach((url, idx) => {
+      if (!url) return;
+      out.push({
+        position: idx + 1,
+        child_post_id: null,
+        child_shortcode: null,
+        media_type: 'image',
+        media_url: url,
+        thumbnail_url: null,
+        alt_text: null,
+        width: null,
+        height: null,
+      });
+    });
+  }
+
+  return out;
+}
+
+function collectComments(item) {
+  const out = [];
+  const list = Array.isArray(item.latestComments) ? item.latestComments : [];
+  for (const c of list) {
+    if (!c || !c.id) continue;
+    out.push({
+      comment_id: String(c.id),
+      owner_username: c.ownerUsername || (c.owner && c.owner.username) || null,
+      owner_id: (c.owner && c.owner.id) ? String(c.owner.id) : null,
+      text: c.text || null,
+      likes_count: toInt(c.likesCount) || 0,
+      replies_count: toInt(c.repliesCount) || 0,
+      parent_comment_id: null,
+      posted_at: parseDate(c.timestamp),
+    });
+    if (Array.isArray(c.replies)) {
+      for (const r of c.replies) {
+        if (!r || !r.id) continue;
+        out.push({
+          comment_id: String(r.id),
+          owner_username: r.ownerUsername || (r.owner && r.owner.username) || null,
+          owner_id: (r.owner && r.owner.id) ? String(r.owner.id) : null,
+          text: r.text || null,
+          likes_count: toInt(r.likesCount) || 0,
+          replies_count: toInt(r.repliesCount) || 0,
+          parent_comment_id: String(c.id),
+          posted_at: parseDate(r.timestamp),
+        });
+      }
+    }
+  }
+  return out;
 }
 
 function normalize(item) {
@@ -58,22 +142,54 @@ function normalize(item) {
     item.ownerUsername || item.username || (item.owner && item.owner.username) || null;
   const fullName =
     item.ownerFullName || (item.owner && item.owner.full_name) || null;
+  const ownerId = item.ownerId ? String(item.ownerId) : null;
+
+  const music = item.musicInfo || {};
+
+  const post = {
+    post_id: String(postId),
+    shortcode: shortcode || null,
+    username,
+    owner_full_name: fullName,
+    owner_id: ownerId,
+    caption: item.caption || null,
+    alt_text: item.alt || null,
+    permalink,
+    input_url: item.inputUrl || null,
+    post_type: pickType(item),
+    product_type: item.productType || null,
+    likes_count: toInt(item.likesCount) || 0,
+    comments_count: toInt(item.commentsCount) || 0,
+    video_url: item.videoUrl || null,
+    video_view_count: toInt(item.videoViewCount),
+    video_play_count: toInt(item.videoPlayCount),
+    video_duration: item.videoDuration != null ? Number(item.videoDuration) : null,
+    dimensions_width: toInt(item.dimensionsWidth),
+    dimensions_height: toInt(item.dimensionsHeight),
+    location_name: item.locationName || null,
+    location_id: item.locationId ? String(item.locationId) : null,
+    music_song: music.song_name || null,
+    music_artist: music.artist_name || null,
+    music_audio_id: music.audio_id ? String(music.audio_id) : null,
+    hashtags: Array.isArray(item.hashtags) ? JSON.stringify(item.hashtags) : null,
+    mentions: Array.isArray(item.mentions) ? JSON.stringify(item.mentions) : null,
+    tagged_users_json: Array.isArray(item.taggedUsers)
+      ? JSON.stringify(item.taggedUsers)
+      : null,
+    coauthors_json: Array.isArray(item.coauthorProducers)
+      ? JSON.stringify(item.coauthorProducers)
+      : null,
+    first_comment: item.firstComment || null,
+    is_pinned: toBool(item.isPinned),
+    is_comments_disabled: toBool(item.isCommentsDisabled),
+    posted_at: parseDate(item.timestamp || item.takenAtTimestamp || item.takenAt),
+    raw_json: JSON.stringify(item),
+  };
 
   return {
-    post: {
-      post_id: String(postId),
-      shortcode: shortcode || null,
-      username,
-      owner_full_name: fullName,
-      caption: item.caption || null,
-      permalink,
-      post_type: pickType(item),
-      likes_count: Number(item.likesCount || item.likes || 0) || 0,
-      comments_count: Number(item.commentsCount || item.comments || 0) || 0,
-      posted_at: parseDate(item.timestamp || item.takenAtTimestamp || item.takenAt),
-      raw_json: JSON.stringify(item),
-    },
+    post,
     media: collectMedia(item),
+    comments: collectComments(item),
   };
 }
 

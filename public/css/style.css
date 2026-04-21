@@ -222,6 +222,73 @@ body {
   font-size: 12px;
 }
 
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+
+.tag {
+  background: #eef6ff;
+  color: var(--accent-dark);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tagged,
+.comments {
+  margin: 16px 0 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.tagged h3,
+.comments h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.tagged ul,
+.comments ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tagged li {
+  font-size: 13px;
+  color: var(--accent-dark);
+}
+
+.comments li {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.comments strong { margin-right: 6px; }
+.comments em { color: var(--muted); margin-left: 6px; font-style: normal; }
+
+.comments .replies {
+  margin: 6px 0 0 16px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+}
+
+.post-head-meta {
+  text-align: right;
+}
+
+.post-head-meta p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 24px 0;

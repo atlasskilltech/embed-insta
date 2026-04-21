@@ -1,26 +1,59 @@
 const pool = require('../db/pool');
 
+const POST_COLUMNS = [
+  'post_id',
+  'shortcode',
+  'username',
+  'owner_full_name',
+  'owner_id',
+  'caption',
+  'alt_text',
+  'permalink',
+  'input_url',
+  'post_type',
+  'product_type',
+  'likes_count',
+  'comments_count',
+  'video_url',
+  'video_view_count',
+  'video_play_count',
+  'video_duration',
+  'dimensions_width',
+  'dimensions_height',
+  'location_name',
+  'location_id',
+  'music_song',
+  'music_artist',
+  'music_audio_id',
+  'hashtags',
+  'mentions',
+  'tagged_users_json',
+  'coauthors_json',
+  'first_comment',
+  'is_pinned',
+  'is_comments_disabled',
+  'posted_at',
+  'raw_json',
+];
+
 async function upsertPost(post) {
+  const placeholders = POST_COLUMNS.map((c) => `:${c}`).join(', ');
+  const updates = POST_COLUMNS
+    .filter((c) => c !== 'post_id')
+    .map((c) => `${c} = VALUES(${c})`)
+    .join(', ');
+
   const sql = `
-    INSERT INTO instagram_posts
-      (post_id, shortcode, username, owner_full_name, caption, permalink, post_type,
-       likes_count, comments_count, posted_at, raw_json)
-    VALUES
-      (:post_id, :shortcode, :username, :owner_full_name, :caption, :permalink, :post_type,
-       :likes_count, :comments_count, :posted_at, :raw_json)
-    ON DUPLICATE KEY UPDATE
-      shortcode = VALUES(shortcode),
-      username = VALUES(username),
-      owner_full_name = VALUES(owner_full_name),
-      caption = VALUES(caption),
-      permalink = VALUES(permalink),
-      post_type = VALUES(post_type),
-      likes_count = VALUES(likes_count),
-      comments_count = VALUES(comments_count),
-      posted_at = VALUES(posted_at),
-      raw_json = VALUES(raw_json)
+    INSERT INTO instagram_posts (${POST_COLUMNS.join(', ')})
+    VALUES (${placeholders})
+    ON DUPLICATE KEY UPDATE ${updates}
   `;
-  await pool.execute(sql, post);
+
+  const params = {};
+  for (const col of POST_COLUMNS) {
+    params[col] = post[col] === undefined ? null : post[col];
+  }
+  await pool.execute(sql, params);
 }
 
 async function findByPostId(postId) {
@@ -54,4 +87,4 @@ async function listPosts({ page = 1, pageSize = 20, username = null } = {}) {
   return { rows, total: countRows[0].total, page, pageSize };
 }
 
-module.exports = { upsertPost, findByPostId, listPosts };
+module.exports = { upsertPost, findByPostId, listPosts, POST_COLUMNS };
