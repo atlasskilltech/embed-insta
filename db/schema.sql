@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
   owner_id             VARCHAR(64)   NULL,
   caption              TEXT          NULL,
   alt_text             TEXT          NULL,
+  display_url          VARCHAR(2048) NULL,
   permalink            VARCHAR(512)  NULL,
   input_url            VARCHAR(512)  NULL,
   post_type            VARCHAR(32)   NULL,

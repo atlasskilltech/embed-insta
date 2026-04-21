@@ -21,9 +21,17 @@
     <% post.media.forEach(function(m) { %>
       <%
         const videoSrc = m.local_url || (m.media_type === 'video' ? m.proxy_url : null);
-        const posterSrc = m.local_thumbnail_url || m.proxy_thumbnail_url || '';
+        const posterSrc =
+          m.local_thumbnail_url ||
+          m.proxy_thumbnail_url ||
+          post.proxy_cover_url ||
+          '';
         const imgSrc =
-          m.local_url || m.local_thumbnail_url || m.proxy_thumbnail_url || m.proxy_url;
+          m.local_url ||
+          m.local_thumbnail_url ||
+          m.proxy_thumbnail_url ||
+          (m.media_type === 'video' ? null : m.proxy_url) ||
+          post.proxy_cover_url;
       %>
       <% if (m.media_type === 'video' && videoSrc) { %>
         <video controls playsinline preload="metadata" poster="<%= posterSrc %>">

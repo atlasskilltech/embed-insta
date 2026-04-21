@@ -29,6 +29,11 @@ function postToPublic(post, media = [], comments = []) {
     owner_id: post.owner_id,
     caption: post.caption,
     alt_text: post.alt_text,
+    display_url: post.display_url || null,
+    proxy_cover_url:
+      post.display_url || (media && media.length)
+        ? `/proxy/cover/${encodeURIComponent(post.post_id)}`
+        : null,
     permalink: post.permalink,
     post_type: post.post_type,
     product_type: post.product_type,

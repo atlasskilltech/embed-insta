@@ -42,12 +42,12 @@
         const posterSrc = first
           ? first.local_thumbnail_url || first.proxy_thumbnail_url || ''
           : '';
-        const imgSrc = first
-          ? first.local_url ||
+        const imgSrc =
+          (first && (first.local_url ||
             first.local_thumbnail_url ||
             first.proxy_thumbnail_url ||
-            first.proxy_url
-          : null;
+            first.proxy_url)) ||
+          post.proxy_cover_url;
       %>
       <% if (first && first.media_type === 'video' && videoSrc) { %>
         <video controls playsinline preload="metadata" poster="<%= posterSrc %>">
