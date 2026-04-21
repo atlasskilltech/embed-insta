@@ -63,4 +63,30 @@ async function findByPostIds(postIds) {
   return grouped;
 }
 
-module.exports = { replaceForPost, findByPostId, findByPostIds };
+async function findMissingLocal(limit = 100) {
+  const [rows] = await pool.query(
+    `SELECT m.id, m.post_id, m.position, m.media_type, m.media_url,
+            m.thumbnail_url, p.username
+       FROM instagram_media m
+       JOIN instagram_posts p ON p.post_id = m.post_id
+      WHERE m.local_path IS NULL
+      ORDER BY m.id ASC
+      LIMIT ${Number(limit) || 100}`
+  );
+  return rows;
+}
+
+async function setLocalPath(id, localPath) {
+  await pool.execute(
+    'UPDATE instagram_media SET local_path = :local_path WHERE id = :id',
+    { id, local_path: localPath }
+  );
+}
+
+module.exports = {
+  replaceForPost,
+  findByPostId,
+  findByPostIds,
+  findMissingLocal,
+  setLocalPath,
+};

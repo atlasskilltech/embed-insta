@@ -20,5 +20,6 @@ router.post('/widgets/:slug', requireAdmin, admin.widgetUpdate);
 router.post('/widgets/:slug/delete', requireAdmin, admin.widgetDelete);
 
 router.post('/fetch', requireAdmin, admin.fetchNow);
+router.post('/media/redownload', requireAdmin, admin.redownloadMissingMedia);
 
 module.exports = router;

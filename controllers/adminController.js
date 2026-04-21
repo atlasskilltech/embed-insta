@@ -1,7 +1,9 @@
 const AdminUser = require('../models/AdminUser');
 const WidgetSettings = require('../models/WidgetSettings');
 const Post = require('../models/Post');
+const Media = require('../models/Media');
 const { ingest } = require('../services/ingestService');
+const { downloadMedia } = require('../services/mediaService');
 const config = require('../config');
 
 function setFlash(req, type, message) {
@@ -238,6 +240,45 @@ function settingsPage(req, res) {
   res.redirect('/admin/widgets/default');
 }
 
+async function redownloadMissingMedia(req, res) {
+  const limit = Math.min(Math.max(parseInt(req.body.limit || req.query.limit, 10) || 100, 1), 500);
+  try {
+    const missing = await Media.findMissingLocal(limit);
+    let downloaded = 0;
+    let failed = 0;
+    for (const m of missing) {
+      const result = await downloadMedia({
+        username: m.username,
+        post_id: m.post_id,
+        media_type: m.media_type,
+        media_url: m.media_url,
+        position: m.position,
+      });
+      if (result && result.local_path) {
+        await Media.setLocalPath(m.id, result.local_path);
+        downloaded += 1;
+      } else {
+        failed += 1;
+      }
+    }
+    const message =
+      `Redownload: ${downloaded} succeeded, ${failed} failed, ` +
+      `${missing.length} attempted (up to ${limit}).`;
+    if (req.accepts(['html', 'json']) === 'json') {
+      return res.json({ ok: true, downloaded, failed, attempted: missing.length });
+    }
+    setFlash(req, downloaded ? 'success' : 'error', message);
+    return res.redirect('/admin');
+  } catch (err) {
+    console.error('[admin] redownload failed:', err);
+    if (req.accepts(['html', 'json']) === 'json') {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+    setFlash(req, 'error', `Redownload failed: ${err.message}`);
+    return res.redirect('/admin');
+  }
+}
+
 async function fetchNow(req, res, next) {
   try {
     const body = req.body || {};
@@ -284,4 +325,5 @@ module.exports = {
   widgetUpdate,
   widgetDelete,
   fetchNow,
+  redownloadMissingMedia,
 };

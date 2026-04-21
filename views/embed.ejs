@@ -29,15 +29,24 @@
     <% } %>
 
     <div class="embed-media">
-      <% const first = post.media[0]; %>
-      <% if (first) { %>
+      <%
+        const first = post.media[0];
+        let altText = first && first.alt_text ? String(first.alt_text).replace(/\s+/g, ' ').trim() : '';
+        if (altText.length > 80) altText = altText.slice(0, 80) + '…';
+        if (!altText) altText = '@' + (post.username || 'post');
+      %>
+      <% if (first && first.local_url) { %>
         <% if (first.media_type === 'video') { %>
           <video controls playsinline preload="metadata" poster="<%= first.thumbnail_url || '' %>">
-            <source src="<%= first.local_url || first.media_url %>" />
+            <source src="<%= first.local_url %>" />
           </video>
         <% } else { %>
-          <img src="<%= first.local_url || first.media_url %>" alt="<%= first.alt_text || '' %>" />
+          <img src="<%= first.local_url %>" alt="<%= altText %>" />
         <% } %>
+      <% } else { %>
+        <div class="widget-placeholder widget-placeholder--gradient">
+          <span><%= (post.username || '?').slice(0, 1).toUpperCase() %></span>
+        </div>
       <% } %>
     </div>
 

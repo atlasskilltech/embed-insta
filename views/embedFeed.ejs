@@ -23,20 +23,50 @@
   const layout = settings.layout || 'grid';
   const visible = posts.slice(0, settings.max_items || 9);
 
+  function shortAlt(text, username) {
+    if (!text) return '@' + (username || 'post');
+    var s = String(text).replace(/\s+/g, ' ').trim();
+    return s.length > 80 ? s.slice(0, 80) + '…' : s;
+  }
+
+  function placeholderTile(post) {
+    var initial = (post.username || '?').slice(0, 1).toUpperCase();
+    return (
+      '<div class="widget-placeholder widget-placeholder--gradient">' +
+        '<span>' + initial + '</span>' +
+      '</div>'
+    );
+  }
+
   function renderCover(post) {
     const cover = post.media[0];
-    if (!cover) return '<div class="widget-placeholder"></div>';
+    if (!cover) return placeholderTile(post);
+
     if (cover.media_type === 'video') {
+      if (!cover.local_url && !cover.thumbnail_url) return placeholderTile(post);
       return (
         '<video muted playsinline preload="metadata" poster="' +
-        (cover.thumbnail_url || '') + '">' +
-        '<source src="' + (cover.local_url || cover.media_url) + '" />' +
+        (cover.thumbnail_url || '') + '"' +
+        ' onerror="this.parentNode.innerHTML=\'' + placeholderTile(post).replace(/'/g, "\\'") + '\'">' +
+        (cover.local_url
+          ? '<source src="' + cover.local_url + '" />'
+          : '') +
         '</video>'
       );
     }
+
+    // Only serve our own mirrored copy. Instagram CDN URLs (media_url,
+    // thumbnail_url) reject anonymous cross-origin browser loads and
+    // render as a broken image, so fall back to a themed placeholder.
+    if (!cover.local_url) return placeholderTile(post);
+
+    var alt = shortAlt(cover.alt_text, post.username);
     return (
-      '<img loading="lazy" src="' + (cover.local_url || cover.media_url) +
-      '" alt="' + (cover.alt_text || '') + '" />'
+      '<img loading="lazy" src="' + cover.local_url + '"' +
+      ' alt="' + alt.replace(/"/g, '&quot;') + '"' +
+      ' onerror="this.onerror=null;this.outerHTML=\'' +
+        placeholderTile(post).replace(/'/g, "\\'") + '\'"' +
+      ' />'
     );
   }
 
@@ -241,17 +271,30 @@
     currentPost = null;
   }
 
+  function placeholderTile(post) {
+    var initial = escapeHtml((post.username || '?').slice(0, 1).toUpperCase());
+    return '<div class="post-modal__placeholder post-modal__placeholder--gradient">' +
+      '<span>' + initial + '</span></div>';
+  }
+
   function renderMedia(post) {
     var items = (post.media && post.media.length) ? post.media : [];
-    if (!items.length) return '<div class="post-modal__placeholder"></div>';
+    if (!items.length) return '<div class="post-modal__media">' + placeholderTile(post) + '</div>';
     var m = items[galleryIndex] || items[0];
-    var src = m.local_url || m.media_url;
-    var inner = m.media_type === 'video'
-      ? '<video controls playsinline preload="metadata" poster="' +
+    var src = m.local_url;
+    var inner;
+    if (!src) {
+      inner = placeholderTile(post);
+    } else if (m.media_type === 'video') {
+      inner = '<video controls playsinline preload="metadata" poster="' +
         escapeHtml(m.thumbnail_url || '') + '">' +
-        '<source src="' + escapeHtml(src) + '" /></video>'
-      : '<img src="' + escapeHtml(src) + '" alt="' +
-        escapeHtml(m.alt_text || '') + '" />';
+        '<source src="' + escapeHtml(src) + '" /></video>';
+    } else {
+      var altText = m.alt_text ? String(m.alt_text).replace(/\s+/g, ' ').trim() : '';
+      if (altText.length > 80) altText = altText.slice(0, 80) + '…';
+      if (!altText) altText = '@' + (post.username || 'post');
+      inner = '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(altText) + '" />';
+    }
     var nav = '';
     if (items.length > 1) {
       nav =
