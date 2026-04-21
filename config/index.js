@@ -49,6 +49,7 @@ module.exports = {
   targets: toList(process.env.INSTAGRAM_TARGETS),
 
   fetchCron: process.env.FETCH_CRON || '',
+  fetchOnStart: toBool(process.env.FETCH_ON_START, false),
 
   media: {
     dir: mediaDir,
