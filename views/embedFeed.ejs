@@ -20,28 +20,50 @@
 </head>
 <body class="embed-body themed layout-<%= settings.layout %>">
 <%
-  function cardFor(post) { return post; }
   const layout = settings.layout || 'grid';
   const visible = posts.slice(0, settings.max_items || 9);
+
+  function renderCover(post) {
+    const cover = post.media[0];
+    if (!cover) return '<div class="widget-placeholder"></div>';
+    if (cover.media_type === 'video') {
+      return (
+        '<video muted playsinline preload="metadata" poster="' +
+        (cover.thumbnail_url || '') + '">' +
+        '<source src="' + (cover.local_url || cover.media_url) + '" />' +
+        '</video>'
+      );
+    }
+    return (
+      '<img loading="lazy" src="' + (cover.local_url || cover.media_url) +
+      '" alt="' + (cover.alt_text || '') + '" />'
+    );
+  }
+
+  function cardAttrs(post) {
+    return (
+      'class="widget-card"' +
+      ' href="/post/' + post.post_id + '"' +
+      ' data-post-id="' + post.post_id + '"' +
+      ' data-permalink="' + (post.permalink || '') + '"' +
+      ' rel="noopener"'
+    );
+  }
 %>
 
 <% if (!visible.length) { %>
   <p class="widget-empty">No posts yet.</p>
 <% } else if (layout === 'single') { %>
-  <% const post = visible[0]; const cover = post.media[0]; %>
-  <article class="widget-single widget-card">
+  <% const post = visible[0]; %>
+  <a <%- cardAttrs(post) %> class="widget-single widget-card">
     <div class="widget-thumb widget-thumb--tall">
-      <% if (cover) { %>
-        <% if (cover.media_type === 'video') { %>
-          <video controls muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
-            <source src="<%= cover.local_url || cover.media_url %>" />
-          </video>
-        <% } else { %>
-          <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
-        <% } %>
-      <% } else { %>
-        <div class="widget-placeholder"></div>
-      <% } %>
+      <%- renderCover(post) %>
+      <div class="widget-hover">
+        <span>&hearts; <%= post.likes_count %></span>
+        <span>&#128172; <%= post.comments_count %></span>
+      </div>
+      <% if (post.post_type === 'carousel') { %><span class="widget-badge">&#x25A3;</span><% } %>
+      <% if (post.post_type === 'video') { %><span class="widget-badge">&#9658;</span><% } %>
     </div>
     <div class="widget-meta">
       <% if (settings.show_username) { %>
@@ -53,35 +75,22 @@
       <% if (settings.show_caption && post.caption) { %>
         <p class="widget-caption widget-caption--full"><%= post.caption %></p>
       <% } %>
-      <% if (post.permalink) { %>
-        <a class="view-link" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a>
-      <% } %>
     </div>
-  </article>
+  </a>
 <% } else if (layout === 'slider') { %>
   <div class="widget-slider" data-slider>
     <button class="widget-slider__arrow widget-slider__arrow--prev" type="button" aria-label="Previous" data-slider-prev>&lsaquo;</button>
     <div class="widget-slider__track" data-slider-track>
       <% visible.forEach(function(post) { %>
-        <a
-          class="widget-card widget-slide"
-          href="<%= post.permalink || ('/post/' + post.post_id) %>"
-          target="_blank"
-          rel="noopener"
-        >
+        <a <%- cardAttrs(post) %> class="widget-card widget-slide">
           <div class="widget-thumb widget-thumb--tall">
-            <% const cover = post.media[0]; %>
-            <% if (cover) { %>
-              <% if (cover.media_type === 'video') { %>
-                <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
-                  <source src="<%= cover.local_url || cover.media_url %>" />
-                </video>
-              <% } else { %>
-                <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
-              <% } %>
-            <% } else { %>
-              <div class="widget-placeholder"></div>
-            <% } %>
+            <%- renderCover(post) %>
+            <div class="widget-hover">
+              <span>&hearts; <%= post.likes_count %></span>
+              <span>&#128172; <%= post.comments_count %></span>
+            </div>
+            <% if (post.post_type === 'carousel') { %><span class="widget-badge">&#x25A3;</span><% } %>
+            <% if (post.post_type === 'video') { %><span class="widget-badge">&#9658;</span><% } %>
           </div>
           <div class="widget-meta">
             <% if (settings.show_username) { %>
@@ -103,40 +112,50 @@
   <div class="widget-feed widget-feed--<%= layout %>">
     <% visible.forEach(function(post, idx) { %>
       <a
+        <%- cardAttrs(post) %>
         class="widget-card <%= layout === 'social-wall' ? 'widget-card--tile-' + ((idx % 7) + 1) : '' %>"
-        href="<%= post.permalink || ('/post/' + post.post_id) %>"
-        target="_blank"
-        rel="noopener"
       >
         <div class="widget-thumb">
-          <% const cover = post.media[0]; %>
-          <% if (cover) { %>
-            <% if (cover.media_type === 'video') { %>
-              <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
-                <source src="<%= cover.local_url || cover.media_url %>" />
-              </video>
-            <% } else { %>
-              <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
+          <%- renderCover(post) %>
+          <div class="widget-hover">
+            <span>&hearts; <%= post.likes_count %></span>
+            <span>&#128172; <%= post.comments_count %></span>
+          </div>
+          <% if (post.post_type === 'carousel') { %><span class="widget-badge">&#x25A3;</span><% } %>
+          <% if (post.post_type === 'video') { %><span class="widget-badge">&#9658;</span><% } %>
+        </div>
+        <% if (layout !== 'social-wall') { %>
+          <div class="widget-meta">
+            <% if (settings.show_username) { %>
+              <strong>@<%= post.username || 'unknown' %></strong>
             <% } %>
-          <% } else { %>
-            <div class="widget-placeholder"></div>
-          <% } %>
-        </div>
-        <div class="widget-meta">
-          <% if (settings.show_username) { %>
+            <% if (settings.show_stats) { %>
+              <span class="widget-stats">&hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %></span>
+            <% } %>
+            <% if (settings.show_caption && post.caption) { %>
+              <p class="widget-caption"><%= post.caption %></p>
+            <% } %>
+          </div>
+        <% } else { %>
+          <div class="widget-meta widget-meta--overlay">
             <strong>@<%= post.username || 'unknown' %></strong>
-          <% } %>
-          <% if (settings.show_stats) { %>
             <span class="widget-stats">&hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %></span>
-          <% } %>
-          <% if (settings.show_caption && post.caption) { %>
-            <p class="widget-caption"><%= post.caption %></p>
-          <% } %>
-        </div>
+          </div>
+        <% } %>
       </a>
     <% }) %>
   </div>
 <% } %>
+
+<div class="post-modal" data-modal hidden aria-hidden="true" role="dialog">
+  <div class="post-modal__backdrop" data-modal-close></div>
+  <div class="post-modal__panel" role="document">
+    <button class="post-modal__close" type="button" aria-label="Close" data-modal-close>&times;</button>
+    <div class="post-modal__body" data-modal-body>
+      <div class="post-modal__loading">Loading&hellip;</div>
+    </div>
+  </div>
+</div>
 
 <% if (layout === 'slider') { %>
   <script>
@@ -155,5 +174,217 @@
     })();
   </script>
 <% } %>
+
+<script>
+(function () {
+  var modal = document.querySelector('[data-modal]');
+  if (!modal) return;
+  var body = modal.querySelector('[data-modal-body]');
+  var cache = {};
+  var galleryIndex = 0;
+  var currentPost = null;
+
+  function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function fmtNumber(n) {
+    n = Number(n || 0);
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(n);
+  }
+
+  function fmtDate(s) {
+    if (!s) return '';
+    var d = new Date(s);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  }
+
+  function open(postId, permalink) {
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('is-modal-open');
+    galleryIndex = 0;
+    if (cache[postId]) return render(cache[postId]);
+    body.innerHTML = '<div class="post-modal__loading">Loading&hellip;</div>';
+    fetch('/api/instagram/post/' + encodeURIComponent(postId), {
+      headers: { Accept: 'application/json' }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok || !data.post) throw new Error('not found');
+        cache[postId] = data.post;
+        render(data.post);
+      })
+      .catch(function () {
+        body.innerHTML =
+          '<div class="post-modal__error">' +
+          'Could not load this post.' +
+          (permalink
+            ? ' <a href="' + escapeHtml(permalink) + '" target="_blank" rel="noopener">Open on Instagram</a>'
+            : '') +
+          '</div>';
+      });
+  }
+
+  function close() {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('is-modal-open');
+    body.innerHTML = '';
+    currentPost = null;
+  }
+
+  function renderMedia(post) {
+    var items = (post.media && post.media.length) ? post.media : [];
+    if (!items.length) return '<div class="post-modal__placeholder"></div>';
+    var m = items[galleryIndex] || items[0];
+    var src = m.local_url || m.media_url;
+    var inner = m.media_type === 'video'
+      ? '<video controls playsinline preload="metadata" poster="' +
+        escapeHtml(m.thumbnail_url || '') + '">' +
+        '<source src="' + escapeHtml(src) + '" /></video>'
+      : '<img src="' + escapeHtml(src) + '" alt="' +
+        escapeHtml(m.alt_text || '') + '" />';
+    var nav = '';
+    if (items.length > 1) {
+      nav =
+        '<button class="post-modal__nav post-modal__nav--prev" type="button" data-gallery-prev aria-label="Previous">&lsaquo;</button>' +
+        '<button class="post-modal__nav post-modal__nav--next" type="button" data-gallery-next aria-label="Next">&rsaquo;</button>' +
+        '<div class="post-modal__dots">' +
+        items.map(function (_, i) {
+          return '<span class="' + (i === galleryIndex ? 'is-active' : '') + '"></span>';
+        }).join('') +
+        '</div>';
+    }
+    return '<div class="post-modal__media">' + inner + nav + '</div>';
+  }
+
+  function renderComments(comments) {
+    if (!comments || !comments.length) {
+      return '<p class="post-modal__empty muted">No comments yet.</p>';
+    }
+    return '<ul class="post-modal__comments">' +
+      comments.slice(0, 30).map(function (c) {
+        return '<li>' +
+          '<strong>@' + escapeHtml(c.owner_username || 'user') + '</strong> ' +
+          escapeHtml(c.text || '') +
+          (c.likes_count ? ' <em>&hearts; ' + fmtNumber(c.likes_count) + '</em>' : '') +
+          '</li>';
+      }).join('') +
+      '</ul>';
+  }
+
+  function renderTags(post) {
+    var parts = [];
+    if (post.hashtags && post.hashtags.length) {
+      parts.push('<div class="post-modal__tags">' +
+        post.hashtags.slice(0, 12).map(function (h) {
+          return '<span class="post-modal__tag">#' + escapeHtml(h) + '</span>';
+        }).join('') + '</div>');
+    }
+    if (post.location && post.location.name) {
+      parts.push('<p class="post-modal__location">&#128205; ' + escapeHtml(post.location.name) + '</p>');
+    }
+    if (post.music && (post.music.song || post.music.artist)) {
+      parts.push('<p class="post-modal__music">&#127926; ' +
+        escapeHtml([post.music.song, post.music.artist].filter(Boolean).join(' — ')) +
+        '</p>');
+    }
+    return parts.join('');
+  }
+
+  function render(post) {
+    currentPost = post;
+    var permalink = post.permalink || '';
+    var html =
+      '<div class="post-modal__grid">' +
+        renderMedia(post) +
+        '<aside class="post-modal__side">' +
+          '<header class="post-modal__head">' +
+            '<div class="post-modal__avatar">' +
+              escapeHtml((post.username || '?').slice(0, 1).toUpperCase()) +
+            '</div>' +
+            '<div class="post-modal__who">' +
+              '<strong>@' + escapeHtml(post.username || 'unknown') + '</strong>' +
+              (post.owner_full_name
+                ? '<span>' + escapeHtml(post.owner_full_name) + '</span>'
+                : '') +
+            '</div>' +
+            (permalink
+              ? '<a class="post-modal__cta" href="' + escapeHtml(permalink) +
+                '" target="_blank" rel="noopener">View on Instagram &rarr;</a>'
+              : '') +
+          '</header>' +
+          '<div class="post-modal__scroll">' +
+            (post.caption
+              ? '<p class="post-modal__caption"><strong>@' +
+                escapeHtml(post.username || 'unknown') + '</strong> ' +
+                escapeHtml(post.caption) + '</p>'
+              : '') +
+            renderTags(post) +
+            '<h4 class="post-modal__section">Comments</h4>' +
+            renderComments(post.comments) +
+          '</div>' +
+          '<footer class="post-modal__foot">' +
+            '<div class="post-modal__stats">' +
+              '<span>&hearts; ' + fmtNumber(post.likes_count) + ' likes</span>' +
+              '<span>&#128172; ' + fmtNumber(post.comments_count) + ' comments</span>' +
+              (post.video_view_count
+                ? '<span>&#128065; ' + fmtNumber(post.video_view_count) + ' views</span>'
+                : '') +
+            '</div>' +
+            '<time>' + escapeHtml(fmtDate(post.posted_at)) + '</time>' +
+          '</footer>' +
+        '</aside>' +
+      '</div>';
+    body.innerHTML = html;
+  }
+
+  document.addEventListener('click', function (e) {
+    var card = e.target.closest('[data-post-id]');
+    if (card) {
+      e.preventDefault();
+      open(card.getAttribute('data-post-id'), card.getAttribute('data-permalink'));
+      return;
+    }
+    if (e.target.closest('[data-modal-close]')) {
+      e.preventDefault();
+      close();
+      return;
+    }
+    if (e.target.closest('[data-gallery-prev]') && currentPost) {
+      galleryIndex = Math.max(0, galleryIndex - 1);
+      body.querySelector('.post-modal__media').outerHTML = renderMedia(currentPost);
+      return;
+    }
+    if (e.target.closest('[data-gallery-next]') && currentPost) {
+      galleryIndex = Math.min(currentPost.media.length - 1, galleryIndex + 1);
+      body.querySelector('.post-modal__media').outerHTML = renderMedia(currentPost);
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (modal.hidden) return;
+    if (e.key === 'Escape') close();
+    if (currentPost && currentPost.media && currentPost.media.length > 1) {
+      if (e.key === 'ArrowLeft') {
+        galleryIndex = Math.max(0, galleryIndex - 1);
+        body.querySelector('.post-modal__media').outerHTML = renderMedia(currentPost);
+      }
+      if (e.key === 'ArrowRight') {
+        galleryIndex = Math.min(currentPost.media.length - 1, galleryIndex + 1);
+        body.querySelector('.post-modal__media').outerHTML = renderMedia(currentPost);
+      }
+    }
+  });
+})();
+</script>
 </body>
 </html>
