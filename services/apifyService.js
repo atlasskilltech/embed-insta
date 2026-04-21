@@ -34,7 +34,10 @@ function buildInput({ targets, resultsLimit, includeComments }) {
   const directUrls = [];
   for (const t of list) {
     const username = extractUsername(t);
-    if (username) usernames.add(username);
+    if (username) {
+      usernames.add(username);
+      continue;
+    }
     if (t.includes('/')) directUrls.push(t);
   }
 
