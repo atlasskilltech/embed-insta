@@ -64,20 +64,30 @@ function postToPublic(post, media = [], comments = []) {
     is_comments_disabled: Boolean(post.is_comments_disabled),
     first_comment: post.first_comment,
     posted_at: post.posted_at,
-    media: media.map((m) => ({
-      position: m.position,
-      media_type: m.media_type,
-      media_url: m.media_url,
-      local_url: m.local_path ? `${config.media.urlPrefix}/${m.local_path}` : null,
-      local_thumbnail_url: m.local_thumbnail_path
-        ? `${config.media.urlPrefix}/${m.local_thumbnail_path}`
-        : null,
-      thumbnail_url: m.thumbnail_url,
-      alt_text: m.alt_text,
-      width: m.width,
-      height: m.height,
-      child_shortcode: m.child_shortcode,
-    })),
+    media: media.map((m) => {
+      const pos = m.position || 0;
+      return {
+        position: pos,
+        media_type: m.media_type,
+        media_url: m.media_url,
+        local_url: m.local_path ? `${config.media.urlPrefix}/${m.local_path}` : null,
+        local_thumbnail_url: m.local_thumbnail_path
+          ? `${config.media.urlPrefix}/${m.local_thumbnail_path}`
+          : null,
+        proxy_url: m.media_url
+          ? `/proxy/media/${encodeURIComponent(post.post_id)}/${pos}`
+          : null,
+        proxy_thumbnail_url:
+          m.thumbnail_url || m.media_url
+            ? `/proxy/media/${encodeURIComponent(post.post_id)}/${pos}/thumb`
+            : null,
+        thumbnail_url: m.thumbnail_url,
+        alt_text: m.alt_text,
+        width: m.width,
+        height: m.height,
+        child_shortcode: m.child_shortcode,
+      };
+    }),
     comments: comments.map((c) => ({
       id: c.comment_id,
       owner_username: c.owner_username,

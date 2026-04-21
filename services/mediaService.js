@@ -200,4 +200,4 @@ async function downloadMedia({
   return result;
 }
 
-module.exports = { downloadMedia };
+module.exports = { downloadMedia, downloader };
