@@ -22,4 +22,13 @@ router.post('/widgets/:slug/delete', requireAdmin, admin.widgetDelete);
 router.post('/fetch', requireAdmin, admin.fetchNow);
 router.post('/media/redownload', requireAdmin, admin.redownloadMissingMedia);
 
+router.get('/graph', requireAdmin, admin.graphAccountsList);
+router.get('/graph/new', requireAdmin, admin.graphAccountNewPage);
+router.post('/graph', requireAdmin, admin.graphAccountCreate);
+router.post('/graph/fetch', requireAdmin, admin.graphFetchNow);
+router.get('/graph/:id', requireAdmin, admin.graphAccountEditPage);
+router.post('/graph/:id', requireAdmin, admin.graphAccountUpdate);
+router.post('/graph/:id/fetch', requireAdmin, admin.graphFetchNow);
+router.post('/graph/:id/delete', requireAdmin, admin.graphAccountDelete);
+
 module.exports = router;

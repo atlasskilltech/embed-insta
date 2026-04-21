@@ -57,6 +57,46 @@
         </div>
 
         <div class="panel-card">
+          <h2>Fetch via Graph API</h2>
+          <p class="muted">
+            Pulls from every active Graph API account stored in
+            <a href="/admin/graph">Graph accounts</a>. Uses Meta's
+            official API — no Apify required.
+          </p>
+          <% const activeGraph = (graphAccounts || []).filter(function(a){ return a.is_active; }); %>
+          <% if (!(graphAccounts || []).length) { %>
+            <p class="muted small">
+              No Graph accounts yet.
+              <a href="/admin/graph/new">Add one</a> to enable this.
+            </p>
+          <% } else { %>
+            <ul class="recent-list small">
+              <% graphAccounts.forEach(function(a) { %>
+                <li>
+                  <a href="/admin/graph/<%= a.id %>">
+                    <strong><%= a.label %></strong>
+                    <span class="muted">· <%= a.ig_business_id %></span>
+                  </a>
+                  <span class="muted small">
+                    <%= a.is_active ? 'active' : 'paused' %>
+                    <% if (a.last_fetched_at) { %> · <%= a.last_fetched_at %><% } %>
+                  </span>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+          <form method="POST" action="/admin/graph/fetch" class="stack">
+            <label class="checkbox">
+              <input type="checkbox" name="downloadMedia" checked />
+              <span>Download media to local storage</span>
+            </label>
+            <button class="btn btn-primary" type="submit" <%= activeGraph.length ? '' : 'disabled' %>>
+              Fetch from Graph API<% if (activeGraph.length) { %> (<%= activeGraph.length %> account<%= activeGraph.length === 1 ? '' : 's' %>)<% } %>
+            </button>
+          </form>
+        </div>
+
+        <div class="panel-card">
           <h2>Repair broken media</h2>
           <p class="muted">
             Redownloads posts whose image or video failed to mirror during

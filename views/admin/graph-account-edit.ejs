@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'graph'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1><%= mode === 'create' ? 'Add Graph API account' : 'Edit Graph API account' %></h1>
+          <p class="muted">
+            <% if (mode === 'edit') { %>
+              Leave the access token blank to keep the existing token.
+            <% } else { %>
+              Creds live in MySQL so you can rotate tokens without redeploying.
+            <% } %>
+          </p>
+        </div>
+        <div class="admin-actions">
+          <a class="btn btn-ghost" href="/admin/graph">&larr; Back</a>
+          <% if (mode === 'edit') { %>
+            <form method="POST" action="/admin/graph/<%= account.id %>/fetch" class="inline">
+              <button type="submit" class="btn btn-primary" <%= account.is_active ? '' : 'disabled' %>>Fetch now</button>
+            </form>
+          <% } %>
+        </div>
+      </header>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form
+        method="POST"
+        action="<%= mode === 'create' ? '/admin/graph' : '/admin/graph/' + account.id %>"
+        class="panel-card stack"
+      >
+        <label class="field">
+          <span>Label</span>
+          <input type="text" name="label" value="<%= account.label || '' %>" maxlength="128" required />
+          <small class="muted">A short name for this account (shown in the list).</small>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Instagram Business Account ID</span>
+            <input
+              type="text"
+              name="ig_business_id"
+              value="<%= account.ig_business_id || '' %>"
+              pattern="[0-9]+"
+              required
+            />
+            <small class="muted">E.g. 17841449043892932</small>
+          </label>
+
+          <label class="field">
+            <span>Facebook Page ID (optional)</span>
+            <input
+              type="text"
+              name="fb_page_id"
+              value="<%= account.fb_page_id || '' %>"
+              pattern="[0-9]*"
+            />
+            <small class="muted">Tracked for reference only.</small>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Access token</span>
+          <textarea
+            name="access_token"
+            rows="3"
+            placeholder="<%= mode === 'edit' ? 'Leave blank to keep current (' + (account.masked_token || '••••') + ')' : 'Paste long-lived Page access token' %>"
+            <%= mode === 'create' ? 'required' : '' %>
+          ></textarea>
+          <small class="muted">
+            Long-lived Page access token from the Graph API Explorer.
+            Page tokens don't expire by default; user tokens do after 60 days.
+          </small>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>API version</span>
+            <input type="text" name="api_version" value="<%= account.api_version || 'v21.0' %>" maxlength="16" />
+          </label>
+
+          <label class="field">
+            <span>Results per fetch</span>
+            <input type="number" name="results_limit" min="1" max="200" value="<%= account.results_limit || 25 %>" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              name="include_comments"
+              <%= account.include_comments ? 'checked' : '' %>
+            />
+            <span>Pull latest comments per post</span>
+          </label>
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              name="is_active"
+              <%= account.is_active ? 'checked' : '' %>
+            />
+            <span>Active (scheduler will run this account)</span>
+          </label>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-primary" type="submit">
+            <%= mode === 'create' ? 'Add account' : 'Save changes' %>
+          </button>
+          <% if (mode === 'edit') { %>
+            <form method="POST" action="/admin/graph/<%= account.id %>/delete" class="inline" onsubmit="return confirm('Delete this account?');">
+              <button type="submit" class="btn btn-ghost danger">Delete</button>
+            </form>
+          <% } %>
+        </div>
+      </form>
+
+      <% if (mode === 'edit' && account.last_error) { %>
+        <div class="panel-card">
+          <h2>Last error</h2>
+          <pre class="muted small"><%= account.last_error %></pre>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

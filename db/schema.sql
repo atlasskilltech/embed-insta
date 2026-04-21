@@ -107,6 +107,24 @@ CREATE TABLE IF NOT EXISTS widget_settings (
 
 INSERT IGNORE INTO widget_settings (name, title) VALUES ('default', 'Default widget');
 
+CREATE TABLE IF NOT EXISTS graph_accounts (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  label             VARCHAR(128)      NOT NULL,
+  ig_business_id    VARCHAR(64)       NOT NULL,
+  fb_page_id        VARCHAR(64)       NULL,
+  access_token      TEXT              NOT NULL,
+  api_version       VARCHAR(16)       NOT NULL DEFAULT 'v21.0',
+  results_limit     SMALLINT UNSIGNED NOT NULL DEFAULT 25,
+  include_comments  TINYINT(1)        NOT NULL DEFAULT 0,
+  is_active         TINYINT(1)        NOT NULL DEFAULT 1,
+  last_fetched_at   DATETIME          NULL,
+  last_error        TEXT              NULL,
+  created_at        DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_graph_ig_business (ig_business_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS instagram_comments (
   id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   post_id         VARCHAR(64)   NOT NULL,
