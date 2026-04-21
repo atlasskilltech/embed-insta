@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS instagram_media (
   CONSTRAINT fk_media_post FOREIGN KEY (post_id) REFERENCES instagram_posts (post_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS admin_users (
+CREATE TABLE IF NOT EXISTS embed_users (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   username      VARCHAR(64)   NOT NULL,
   email         VARCHAR(191)  NULL,
@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_admin_username (username),
-  UNIQUE KEY uq_admin_email (email)
+  UNIQUE KEY uq_embed_user_username (username),
+  UNIQUE KEY uq_embed_user_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS widget_settings (

@@ -34,6 +34,20 @@ async function migrate() {
     multipleStatements: true,
   });
 
+  const [renameRows] = await conn.query(
+    `SELECT
+       SUM(CASE WHEN table_name = 'admin_users' THEN 1 ELSE 0 END) AS old_exists,
+       SUM(CASE WHEN table_name = 'embed_users' THEN 1 ELSE 0 END) AS new_exists
+     FROM information_schema.tables
+     WHERE table_schema = ?`,
+    [DB_NAME]
+  );
+  const { old_exists, new_exists } = renameRows[0] || {};
+  if (Number(old_exists) && !Number(new_exists)) {
+    console.log('[migrate] renaming admin_users -> embed_users');
+    await conn.query('RENAME TABLE admin_users TO embed_users');
+  }
+
   const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await conn.query(sql);
   await conn.end();
