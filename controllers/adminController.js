@@ -7,6 +7,7 @@ const Media = require('../models/Media');
 const GraphAccount = require('../models/GraphAccount');
 const { ingest, ingestFromGraph, ingestGraphAccount } = require('../services/ingestService');
 const { downloadMedia } = require('../services/mediaService');
+const graphApi = require('../services/graphApiService');
 const config = require('../config');
 
 function setFlash(req, type, message) {
@@ -511,6 +512,20 @@ async function graphFetchNow(req, res) {
       summary = await ingestFromGraph({
         downloadMedia: !(req.body && req.body.downloadMedia === 'off'),
       });
+      // Surface auto-paused accounts in the flash so the admin knows
+      // to paste a fresh token.
+      const paused = (summary.accounts || []).filter((a) => a.auto_paused);
+      if (paused.length) {
+        if (wantsJson) return res.json({ ok: false, summary });
+        setFlash(
+          req,
+          'error',
+          `Auto-paused ${paused.length} account(s) with expired tokens: ` +
+            paused.map((a) => a.account && a.account.label).filter(Boolean).join(', ') +
+            '. Edit the account to paste a fresh long-lived Page access token.'
+        );
+        return res.redirect('/admin/graph');
+      }
     }
     if (wantsJson) return res.json({ ok: true, summary });
     const msg = id
@@ -520,12 +535,49 @@ async function graphFetchNow(req, res) {
     res.redirect(id ? `/admin/graph/${id}` : '/admin/graph');
   } catch (err) {
     console.error('[admin] graph fetch failed:', err);
-    if (id && err && err.message) {
-      await GraphAccount.markError(id, err.message).catch(() => {});
+    if (id) {
+      await GraphAccount.markError(id, err.message || String(err)).catch(() => {});
+      if (err && err.isAuthError) {
+        await GraphAccount.setActive(id, false).catch(() => {});
+      }
     }
     if (wantsJson) return res.status(500).json({ ok: false, error: err.message });
-    setFlash(req, 'error', `Graph fetch failed: ${err.message}`);
+    const suffix = err && err.isAuthError
+      ? ' Account has been paused — paste a fresh long-lived token and save to re-enable.'
+      : '';
+    setFlash(req, 'error', `Graph fetch failed: ${err.message}.${suffix}`);
     res.redirect(id ? `/admin/graph/${id}` : '/admin/graph');
+  }
+}
+
+async function graphAccountTest(req, res) {
+  const wantsJson = req.accepts(['html', 'json']) === 'json';
+  const id = Number(req.params.id);
+  try {
+    const account = await GraphAccount.findById(id);
+    if (!account) {
+      if (wantsJson) return res.status(404).json({ ok: false, error: 'not found' });
+      setFlash(req, 'error', 'Graph account not found.');
+      return res.redirect('/admin/graph');
+    }
+    const info = await graphApi.verifyCredentials(account);
+    await GraphAccount.markError(id, null).catch(() => {});
+    const msg = `Graph token OK — ${info.username ? '@' + info.username : info.id}` +
+      (info.name ? ` (${info.name})` : '') + '.';
+    if (wantsJson) return res.json({ ok: true, info });
+    setFlash(req, 'success', msg);
+    res.redirect(`/admin/graph/${id}`);
+  } catch (err) {
+    await GraphAccount.markError(id, err.message || String(err)).catch(() => {});
+    if (err && err.isAuthError) {
+      await GraphAccount.setActive(id, false).catch(() => {});
+    }
+    if (wantsJson) return res.status(400).json({ ok: false, error: err.message });
+    const suffix = err && err.isAuthError
+      ? ' Account paused — save a fresh token below to re-enable.'
+      : '';
+    setFlash(req, 'error', `Test failed: ${err.message}.${suffix}`);
+    res.redirect(`/admin/graph/${id}`);
   }
 }
 
@@ -550,4 +602,5 @@ module.exports = {
   graphAccountUpdate,
   graphAccountDelete,
   graphFetchNow,
+  graphAccountTest,
 };

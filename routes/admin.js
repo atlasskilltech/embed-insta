@@ -29,6 +29,7 @@ router.post('/graph/fetch', requireAdmin, admin.graphFetchNow);
 router.get('/graph/:id', requireAdmin, admin.graphAccountEditPage);
 router.post('/graph/:id', requireAdmin, admin.graphAccountUpdate);
 router.post('/graph/:id/fetch', requireAdmin, admin.graphFetchNow);
+router.post('/graph/:id/test', requireAdmin, admin.graphAccountTest);
 router.post('/graph/:id/delete', requireAdmin, admin.graphAccountDelete);
 
 module.exports = router;

@@ -125,9 +125,26 @@ async function fetchComments(account, mediaId, { limit = 20 } = {}) {
   }
 }
 
+async function verifyCredentials(account) {
+  if (!account || !account.access_token || !account.ig_business_id) {
+    throw new Error('graph account missing credentials');
+  }
+  const apiVersion = account.api_version || 'v21.0';
+  const data = await graphGet(`${GRAPH_BASE}/${apiVersion}/${account.ig_business_id}`, {
+    fields: 'id,username,name',
+    access_token: account.access_token,
+  });
+  return {
+    id: data && data.id,
+    username: (data && data.username) || null,
+    name: (data && data.name) || null,
+  };
+}
+
 module.exports = {
   fetchMedia,
   fetchComments,
+  verifyCredentials,
   describeError,
   isAuthError,
 };

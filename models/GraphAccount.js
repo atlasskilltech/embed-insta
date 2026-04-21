@@ -108,6 +108,13 @@ async function markError(id, message) {
   );
 }
 
+async function setActive(id, isActive) {
+  await pool.execute(
+    'UPDATE graph_accounts SET is_active = :is_active WHERE id = :id',
+    { id, is_active: isActive ? 1 : 0 }
+  );
+}
+
 function maskToken(token) {
   if (!token) return '';
   const s = String(token);
@@ -124,5 +131,6 @@ module.exports = {
   remove,
   markFetched,
   markError,
+  setActive,
   maskToken,
 };

@@ -42,6 +42,17 @@
           </p>
         </div>
       <% } else { %>
+        <% const paused = accounts.filter(function(a){ return !a.is_active && a.last_error; }); %>
+        <% if (paused.length) { %>
+          <div class="alert alert-error">
+            <strong><%= paused.length %> account<%= paused.length === 1 ? '' : 's' %> auto-paused.</strong>
+            Their access token was rejected by Meta (most commonly:
+            expired session).
+            Edit the account, paste a fresh long-lived Page access
+            token, and re-enable "Active". See
+            <a href="https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived" target="_blank" rel="noopener">Meta's long-lived token guide</a>.
+          </div>
+        <% } %>
         <div class="panel-card no-pad">
           <table class="admin-table">
             <thead>
@@ -85,6 +96,9 @@
                     <% } %>
                   </td>
                   <td class="nowrap">
+                    <form method="POST" action="/admin/graph/<%= a.id %>/test" class="inline">
+                      <button type="submit" class="btn btn-ghost btn-sm">Test</button>
+                    </form>
                     <form method="POST" action="/admin/graph/<%= a.id %>/fetch" class="inline">
                       <button type="submit" class="btn btn-ghost btn-sm" <%= a.is_active ? '' : 'disabled' %>>Fetch</button>
                     </form>

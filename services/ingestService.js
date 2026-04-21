@@ -128,14 +128,22 @@ async function ingestFromGraph(options = {}) {
       await GraphAccount.markFetched(account.id);
     } catch (err) {
       const message = err && err.message ? err.message : String(err);
+      const isAuth = Boolean(err && err.isAuthError);
       console.error(
-        `[ingest] graph account "${account.label || account.ig_business_id}" failed: ${message}`
+        `[ingest] graph account "${account.label || account.ig_business_id}" failed: ${message}` +
+          (isAuth ? ' (auto-pausing: token needs refresh)' : '')
       );
       await GraphAccount.markError(account.id, message);
+      // Pause the account on OAuth errors so the cron doesn't keep
+      // slamming an expired token. Admin will re-enable after pasting
+      // a fresh token in the edit form.
+      if (isAuth) await GraphAccount.setActive(account.id, false);
       perAccount.push({
         source: 'graph',
         account: { id: account.id, label: account.label },
         error: message,
+        auth_error: isAuth,
+        auto_paused: isAuth,
       });
     }
   }

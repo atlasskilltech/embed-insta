@@ -26,6 +26,9 @@
         <div class="admin-actions">
           <a class="btn btn-ghost" href="/admin/graph">&larr; Back</a>
           <% if (mode === 'edit') { %>
+            <form method="POST" action="/admin/graph/<%= account.id %>/test" class="inline">
+              <button type="submit" class="btn btn-ghost">Test connection</button>
+            </form>
             <form method="POST" action="/admin/graph/<%= account.id %>/fetch" class="inline">
               <button type="submit" class="btn btn-primary" <%= account.is_active ? '' : 'disabled' %>>Fetch now</button>
             </form>
@@ -35,6 +38,16 @@
 
       <% if (error) { %>
         <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (mode === 'edit' && !account.is_active && account.last_error) { %>
+        <div class="alert alert-error">
+          <strong>Account paused.</strong> Meta rejected the last
+          request — usually an expired session. Paste a fresh
+          long-lived Page access token below, tick "Active", and
+          save. You can then hit <em>Test connection</em> to verify
+          without running a full fetch.
+        </div>
       <% } %>
 
       <form
