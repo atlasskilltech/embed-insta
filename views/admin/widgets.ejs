@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'widgets'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1>Widgets</h1>
+          <p class="muted">
+            Create one widget per Instagram page. Each widget has its own
+            design, embed URL, and target list.
+          </p>
+        </div>
+        <a class="btn btn-primary" href="/admin/widgets/new">&#43; New widget</a>
+      </header>
+
+      <div class="widget-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Slug</th>
+              <th>Layout</th>
+              <th>Targets</th>
+              <th>Embed URL</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% widgets.forEach(function(w) { %>
+              <tr>
+                <td><strong><%= w.title || w.name %></strong></td>
+                <td><code><%= w.name %></code></td>
+                <td><%= w.layout %></td>
+                <td>
+                  <% if (w.targets.length) { %>
+                    <span class="tag-stack">
+                      <% w.targets.slice(0, 3).forEach(function(t){ %>
+                        <span class="post-modal__tag"><%= t %></span>
+                      <% }) %>
+                      <% if (w.targets.length > 3) { %>
+                        <span class="muted">+<%= w.targets.length - 3 %></span>
+                      <% } %>
+                    </span>
+                  <% } else { %>
+                    <span class="muted">All posts</span>
+                  <% } %>
+                </td>
+                <td><a href="<%= baseUrl %>/embed/feed/<%= w.name %>" target="_blank" rel="noopener">/embed/feed/<%= w.name %></a></td>
+                <td class="muted"><%= w.updated_at || '—' %></td>
+                <td class="row-actions">
+                  <a class="btn btn-ghost" href="/admin/widgets/<%= w.name %>">Edit</a>
+                  <% if (w.name !== 'default') { %>
+                    <form method="POST" action="/admin/widgets/<%= w.name %>/delete" class="inline" onsubmit="return confirm('Delete widget &quot;<%= w.name %>&quot;?');">
+                      <button class="btn btn-ghost danger" type="submit">Delete</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

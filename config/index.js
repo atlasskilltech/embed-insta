@@ -19,10 +19,14 @@ const toList = (v) =>
 
 const mediaDir = process.env.MEDIA_DIR || 'uploads/instagram';
 
+const port = toInt(process.env.PORT, 3000);
+const rawBaseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+
 module.exports = {
   env: process.env.NODE_ENV || 'development',
-  port: toInt(process.env.PORT, 3000),
-  baseUrl: process.env.BASE_URL || `http://localhost:${toInt(process.env.PORT, 3000)}`,
+  port,
+  baseUrl,
   apiKey: process.env.API_KEY || '',
 
   admin: {

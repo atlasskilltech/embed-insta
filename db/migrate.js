@@ -50,6 +50,22 @@ async function migrate() {
 
   const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await conn.query(sql);
+
+  async function ensureColumn(table, column, definition) {
+    const [rows] = await conn.query(
+      `SELECT COUNT(*) AS c FROM information_schema.columns
+       WHERE table_schema = ? AND table_name = ? AND column_name = ?`,
+      [DB_NAME, table, column]
+    );
+    if (!Number(rows[0].c)) {
+      console.log(`[migrate] adding ${table}.${column}`);
+      await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
+    }
+  }
+
+  await ensureColumn('widget_settings', 'title', 'title VARCHAR(128) NULL AFTER name');
+  await ensureColumn('widget_settings', 'targets_json', 'targets_json TEXT NULL AFTER title');
+
   await conn.end();
 
   console.log(`[migrate] database "${DB_NAME}" ready`);

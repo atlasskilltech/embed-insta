@@ -56,7 +56,8 @@ async function embed(req, res, next) {
       Media.findByPostId(post.post_id),
       WidgetSettings.getActive(),
     ]);
-    res.set('X-Frame-Options', 'ALLOWALL');
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', "frame-ancestors *");
     res.render('embed', {
       title: 'Embed',
       post: postToPublic(post, media),
@@ -71,18 +72,30 @@ async function embed(req, res, next) {
 
 async function embedFeed(req, res, next) {
   try {
-    const settings = await WidgetSettings.getActive();
+    const slug = req.params.slug || 'default';
+    const settings = await WidgetSettings.getActive(slug);
+    if (!settings) return res.status(404).render('404', { title: 'Widget not found' });
+
     const pageSize = Math.min(
       Math.max(parseInt(req.query.limit, 10) || settings.max_items || 9, 1),
       60
     );
-    const username = req.query.username || null;
-    const { rows } = await Post.listPosts({ page: 1, pageSize, username });
+    const widgetUsernames = WidgetSettings.usernamesFromRow(settings);
+    const queryUsername = req.query.username || null;
+
+    const { rows } = await Post.listPosts({
+      page: 1,
+      pageSize,
+      username: queryUsername,
+      usernames: widgetUsernames.length && !queryUsername ? widgetUsernames : null,
+    });
+
     const mediaByPost = await Media.findByPostIds(rows.map((r) => r.post_id));
     const posts = rows.map((r) => postToPublic(r, mediaByPost[r.post_id] || []));
-    res.set('X-Frame-Options', 'ALLOWALL');
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', "frame-ancestors *");
     res.render('embedFeed', {
-      title: 'Embed Feed',
+      title: `Embed Feed · ${settings.title || settings.name}`,
       posts,
       settings,
       baseUrl: config.baseUrl,

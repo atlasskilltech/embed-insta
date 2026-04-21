@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS embed_users (
 CREATE TABLE IF NOT EXISTS widget_settings (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   name            VARCHAR(64)   NOT NULL DEFAULT 'default',
+  title           VARCHAR(128)  NULL,
+  targets_json    TEXT          NULL,
   layout          VARCHAR(16)   NOT NULL DEFAULT 'grid',
   columns         TINYINT UNSIGNED NOT NULL DEFAULT 3,
   card_radius     TINYINT UNSIGNED NOT NULL DEFAULT 8,
@@ -101,7 +103,7 @@ CREATE TABLE IF NOT EXISTS widget_settings (
   UNIQUE KEY uq_widget_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO widget_settings (name) VALUES ('default');
+INSERT IGNORE INTO widget_settings (name, title) VALUES ('default', 'Default widget');
 
 CREATE TABLE IF NOT EXISTS instagram_comments (
   id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
