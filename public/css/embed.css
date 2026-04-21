@@ -476,7 +476,40 @@ body.is-modal-open { overflow: hidden; }
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease;
 }
+.post-modal__tag:hover { background: #e1ebff; text-decoration: none; }
+
+.post-modal__caption a {
+  color: var(--w-accent, #0095f6);
+  text-decoration: none;
+  font-weight: 600;
+}
+.post-modal__caption a:hover { text-decoration: underline; }
+
+.post-modal__tagged {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.post-modal__tagged li { font-size: 13px; }
+.post-modal__tagged a {
+  color: var(--w-accent, #0095f6);
+  text-decoration: none;
+  background: #f1f5ff;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.post-modal__tagged a:hover { background: #e1ebff; text-decoration: none; }
+.post-modal__verified { color: #1da1f2; font-size: 11px; }
 
 .post-modal__location,
 .post-modal__music {

@@ -360,12 +360,38 @@
       '</ul>';
   }
 
+  function linkifyCaption(text) {
+    return escapeHtml(text)
+      .replace(/(^|[^\w/])@([a-zA-Z0-9._]{2,30})/g,
+        '$1<a href="https://www.instagram.com/$2/" target="_blank" rel="noopener">@$2</a>')
+      .replace(/(^|[^\w/])#([a-zA-Z0-9_]+)/g,
+        '$1<a href="https://www.instagram.com/explore/tags/$2/" target="_blank" rel="noopener">#$2</a>');
+  }
+
+  function renderTaggedUsers(post) {
+    var users = post.tagged_users || [];
+    if (!users.length) return '';
+    return '<h4 class="post-modal__section">Tagged</h4>' +
+      '<ul class="post-modal__tagged">' +
+      users.slice(0, 12).map(function (u) {
+        var name = escapeHtml(u.username || '');
+        if (!name) return '';
+        return '<li><a href="https://www.instagram.com/' + name +
+          '/" target="_blank" rel="noopener">@' + name +
+          (u.is_verified ? ' <span class="post-modal__verified" title="Verified">&#10003;</span>' : '') +
+          '</a></li>';
+      }).join('') +
+      '</ul>';
+  }
+
   function renderTags(post) {
     var parts = [];
     if (post.hashtags && post.hashtags.length) {
       parts.push('<div class="post-modal__tags">' +
         post.hashtags.slice(0, 12).map(function (h) {
-          return '<span class="post-modal__tag">#' + escapeHtml(h) + '</span>';
+          var name = escapeHtml(h);
+          return '<a class="post-modal__tag" href="https://www.instagram.com/explore/tags/' +
+            name + '/" target="_blank" rel="noopener">#' + name + '</a>';
         }).join('') + '</div>');
     }
     if (post.location && post.location.name) {
@@ -405,9 +431,10 @@
             (post.caption
               ? '<p class="post-modal__caption"><strong>@' +
                 escapeHtml(post.username || 'unknown') + '</strong> ' +
-                escapeHtml(post.caption) + '</p>'
+                linkifyCaption(post.caption) + '</p>'
               : '') +
             renderTags(post) +
+            renderTaggedUsers(post) +
             '<h4 class="post-modal__section">Comments</h4>' +
             renderComments(post.comments) +
           '</div>' +
