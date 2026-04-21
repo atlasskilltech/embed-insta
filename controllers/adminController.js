@@ -93,14 +93,36 @@ async function dashboard(req, res, next) {
   }
 }
 
-async function settingsPage(req, res, next) {
+function bodyToPatch(body) {
+  return {
+    title: body.title,
+    targets: body.targets,
+    layout: body.layout,
+    columns: body.columns,
+    card_radius: body.card_radius,
+    gap: body.gap,
+    show_caption: body.show_caption === 'on' || body.show_caption === '1',
+    show_stats: body.show_stats === 'on' || body.show_stats === '1',
+    show_username: body.show_username === 'on' || body.show_username === '1',
+    accent_color: body.accent_color,
+    background: body.background,
+    text_color: body.text_color,
+    border_color: body.border_color,
+    font_family: body.font_family,
+    max_items: body.max_items,
+  };
+}
+
+async function widgetsList(req, res, next) {
   try {
-    const settings = await WidgetSettings.getActive();
-    res.render('admin/settings', {
-      title: 'Widget Design',
+    const rows = await WidgetSettings.list();
+    res.render('admin/widgets', {
+      title: 'Widgets',
       layout: false,
-      settings,
-      layouts: WidgetSettings.LAYOUTS,
+      widgets: rows.map((w) => ({
+        ...w,
+        targets: WidgetSettings.targetsToDisplay(w),
+      })),
       baseUrl: config.baseUrl,
     });
   } catch (err) {
@@ -108,32 +130,112 @@ async function settingsPage(req, res, next) {
   }
 }
 
-async function settingsSubmit(req, res, next) {
+async function widgetNewPage(req, res, next) {
   try {
-    const body = req.body || {};
-    await WidgetSettings.update(
-      {
-        layout: body.layout,
-        columns: body.columns,
-        card_radius: body.card_radius,
-        gap: body.gap,
-        show_caption: body.show_caption === 'on' || body.show_caption === '1',
-        show_stats: body.show_stats === 'on' || body.show_stats === '1',
-        show_username: body.show_username === 'on' || body.show_username === '1',
-        accent_color: body.accent_color,
-        background: body.background,
-        text_color: body.text_color,
-        border_color: body.border_color,
-        font_family: body.font_family,
-        max_items: body.max_items,
-      },
-      req.session.admin && req.session.admin.id
-    );
-    setFlash(req, 'success', 'Widget design updated.');
-    res.redirect('/admin/settings');
+    res.render('admin/widget-edit', {
+      title: 'New widget',
+      layout: false,
+      mode: 'create',
+      widget: { name: '', ...WidgetSettings.DEFAULTS, title: '' },
+      targetsText: '',
+      layouts: WidgetSettings.LAYOUTS,
+      baseUrl: config.baseUrl,
+      error: null,
+    });
   } catch (err) {
     next(err);
   }
+}
+
+async function widgetCreate(req, res, next) {
+  try {
+    const body = req.body || {};
+    const patch = bodyToPatch(body);
+    const slug = WidgetSettings.sanitizeSlug(body.slug);
+    if (!slug) {
+      return res.status(400).render('admin/widget-edit', {
+        title: 'New widget',
+        layout: false,
+        mode: 'create',
+        widget: { name: body.slug || '', ...WidgetSettings.DEFAULTS, title: body.title || '' },
+        targetsText: body.targets || '',
+        layouts: WidgetSettings.LAYOUTS,
+        baseUrl: config.baseUrl,
+        error: 'Slug must be 1-64 chars of a-z, 0-9, or -',
+      });
+    }
+    try {
+      await WidgetSettings.create(
+        { slug, ...patch },
+        req.session.admin && req.session.admin.id
+      );
+    } catch (err) {
+      return res.status(400).render('admin/widget-edit', {
+        title: 'New widget',
+        layout: false,
+        mode: 'create',
+        widget: { name: slug, ...WidgetSettings.DEFAULTS, ...patch },
+        targetsText: body.targets || '',
+        layouts: WidgetSettings.LAYOUTS,
+        baseUrl: config.baseUrl,
+        error: err.message,
+      });
+    }
+    setFlash(req, 'success', `Widget "${slug}" created.`);
+    res.redirect(`/admin/widgets/${slug}`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function widgetEditPage(req, res, next) {
+  try {
+    const widget = await WidgetSettings.findBySlug(req.params.slug);
+    if (!widget) return res.status(404).render('404', { title: 'Widget not found' });
+    res.render('admin/widget-edit', {
+      title: `Widget · ${widget.title || widget.name}`,
+      layout: false,
+      mode: 'edit',
+      widget,
+      targetsText: WidgetSettings.targetsToDisplay(widget).join('\n'),
+      layouts: WidgetSettings.LAYOUTS,
+      baseUrl: config.baseUrl,
+      error: null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function widgetUpdate(req, res, next) {
+  try {
+    const widget = await WidgetSettings.findBySlug(req.params.slug);
+    if (!widget) return res.status(404).render('404', { title: 'Widget not found' });
+    await WidgetSettings.update(
+      widget.name,
+      bodyToPatch(req.body || {}),
+      req.session.admin && req.session.admin.id
+    );
+    setFlash(req, 'success', `Widget "${widget.name}" updated.`);
+    res.redirect(`/admin/widgets/${widget.name}`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function widgetDelete(req, res, next) {
+  try {
+    await WidgetSettings.remove(req.params.slug);
+    setFlash(req, 'success', `Widget "${req.params.slug}" deleted.`);
+    res.redirect('/admin/widgets');
+  } catch (err) {
+    setFlash(req, 'error', err.message);
+    res.redirect('/admin/widgets');
+  }
+}
+
+function settingsPage(req, res) {
+  res.redirect('/admin/widgets/default');
 }
 
 async function fetchNow(req, res, next) {
@@ -175,6 +277,11 @@ module.exports = {
   logout,
   dashboard,
   settingsPage,
-  settingsSubmit,
+  widgetsList,
+  widgetNewPage,
+  widgetCreate,
+  widgetEditPage,
+  widgetUpdate,
+  widgetDelete,
   fetchNow,
 };

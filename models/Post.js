@@ -64,13 +64,28 @@ async function findByPostId(postId) {
   return rows[0] || null;
 }
 
-async function listPosts({ page = 1, pageSize = 20, username = null } = {}) {
+async function listPosts({
+  page = 1,
+  pageSize = 20,
+  username = null,
+  usernames = null,
+} = {}) {
   const offset = (Math.max(1, page) - 1) * pageSize;
   const where = [];
   const params = {};
   if (username) {
     where.push('username = :username');
     params.username = username;
+  }
+  if (Array.isArray(usernames) && usernames.length) {
+    const lowered = usernames.map((u) => String(u).toLowerCase());
+    const placeholders = lowered
+      .map((_, i) => `:username_${i}`)
+      .join(', ');
+    lowered.forEach((value, i) => {
+      params[`username_${i}`] = value;
+    });
+    where.push(`LOWER(username) IN (${placeholders})`);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 

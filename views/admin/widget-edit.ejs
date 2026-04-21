@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'widgets'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1>
+            <%= mode === 'create' ? 'Create widget' : 'Edit widget' %>
+            <% if (mode === 'edit') { %>
+              <code class="muted"><%= widget.name %></code>
+            <% } %>
+          </h1>
+          <p class="muted">
+            Each widget has its own design and can be tied to specific
+            Instagram pages. Leave targets empty to show all stored posts.
+          </p>
+        </div>
+        <a class="btn btn-ghost" href="/admin/widgets">&larr; All widgets</a>
+      </header>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <div class="panel-grid two-col">
+        <form
+          method="POST"
+          action="<%= mode === 'create' ? '/admin/widgets' : '/admin/widgets/' + widget.name %>"
+          class="stack panel-card"
+        >
+          <h2>Identity</h2>
+          <div class="row">
+            <label class="field">
+              <span>Title</span>
+              <input type="text" name="title" maxlength="128" value="<%= widget.title || '' %>" placeholder="Events wall, Homepage portfolio…" />
+            </label>
+            <label class="field">
+              <span>Slug</span>
+              <% if (mode === 'create') { %>
+                <input type="text" name="slug" maxlength="64" value="<%= widget.name || '' %>" placeholder="a-z, 0-9, -" required />
+              <% } else { %>
+                <input type="text" value="<%= widget.name %>" disabled />
+              <% } %>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Instagram targets (one per line)</span>
+            <textarea name="targets" rows="4" placeholder="@nasa&#10;https://www.instagram.com/instagram/"><%= targetsText %></textarea>
+            <small class="muted">
+              Accepts handles (<code>nasa</code>, <code>@nasa</code>) or profile URLs.
+              Leave blank to show posts from every target.
+            </small>
+          </label>
+
+          <h2>Layout</h2>
+          <div class="layout-picker" role="radiogroup" aria-label="Layout">
+            <% layouts.forEach(function(opt){ %>
+              <label class="layout-option <%= widget.layout === opt.value ? 'is-active' : '' %>">
+                <input
+                  type="radio"
+                  name="layout"
+                  value="<%= opt.value %>"
+                  <%= widget.layout === opt.value ? 'checked' : '' %>
+                />
+                <span class="layout-preview layout-preview--<%= opt.value %>" aria-hidden="true"></span>
+                <span class="layout-body">
+                  <strong><%= opt.label %></strong>
+                  <em><%= opt.description %></em>
+                </span>
+              </label>
+            <% }) %>
+          </div>
+
+          <div class="row">
+            <label class="field">
+              <span>Columns</span>
+              <input type="number" name="columns" min="1" max="6" value="<%= widget.columns %>" />
+            </label>
+            <label class="field">
+              <span>Max items</span>
+              <input type="number" name="max_items" min="1" max="60" value="<%= widget.max_items %>" />
+            </label>
+            <label class="field">
+              <span>Gap (px)</span>
+              <input type="number" name="gap" min="0" max="48" value="<%= widget.gap %>" />
+            </label>
+            <label class="field">
+              <span>Card radius (px)</span>
+              <input type="number" name="card_radius" min="0" max="40" value="<%= widget.card_radius %>" />
+            </label>
+          </div>
+
+          <h2>Colors</h2>
+          <div class="row">
+            <label class="field">
+              <span>Accent</span>
+              <input type="color" name="accent_color" value="<%= widget.accent_color %>" />
+            </label>
+            <label class="field">
+              <span>Background</span>
+              <input type="color" name="background" value="<%= widget.background %>" />
+            </label>
+            <label class="field">
+              <span>Text</span>
+              <input type="color" name="text_color" value="<%= widget.text_color %>" />
+            </label>
+            <label class="field">
+              <span>Border</span>
+              <input type="color" name="border_color" value="<%= widget.border_color %>" />
+            </label>
+          </div>
+
+          <h2>Typography & toggles</h2>
+          <label class="field">
+            <span>Font family</span>
+            <input type="text" name="font_family" value="<%= widget.font_family %>" />
+          </label>
+
+          <div class="row">
+            <label class="checkbox">
+              <input type="checkbox" name="show_username" <%= widget.show_username ? 'checked' : '' %> />
+              <span>Show username</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="show_caption" <%= widget.show_caption ? 'checked' : '' %> />
+              <span>Show caption</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="show_stats" <%= widget.show_stats ? 'checked' : '' %> />
+              <span>Show likes &amp; comments</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">
+              <%= mode === 'create' ? 'Create widget' : 'Save changes' %>
+            </button>
+            <a class="btn btn-ghost" href="/admin/widgets">Cancel</a>
+          </div>
+        </form>
+
+        <aside class="panel-card">
+          <h2>Embed snippet</h2>
+          <% if (mode === 'create') { %>
+            <p class="muted">Save the widget first to get its embed URL.</p>
+          <% } else { %>
+            <p class="muted">Drop this on any site to render this widget.</p>
+            <pre class="code">&lt;iframe
+  src="<%= baseUrl %>/embed/feed/<%= widget.name %>"
+  width="100%"
+  height="640"
+  frameborder="0"
+  scrolling="no"
+  allowtransparency="true"&gt;&lt;/iframe&gt;</pre>
+            <a class="btn btn-ghost" href="<%= baseUrl %>/embed/feed/<%= widget.name %>" target="_blank" rel="noopener">Preview &rarr;</a>
+          <% } %>
+          <h3>Current settings</h3>
+          <ul class="kv">
+            <li><span>Layout</span><strong><%= widget.layout %></strong></li>
+            <li><span>Columns</span><strong><%= widget.columns %></strong></li>
+            <li><span>Max items</span><strong><%= widget.max_items %></strong></li>
+            <li><span>Accent</span><strong><span class="swatch" style="background: <%= widget.accent_color %>"></span> <%= widget.accent_color %></strong></li>
+            <% if (mode === 'edit') { %>
+              <li><span>Updated</span><strong><%= widget.updated_at || '—' %></strong></li>
+            <% } %>
+          </ul>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

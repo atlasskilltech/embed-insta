@@ -600,6 +600,72 @@ a:hover { text-decoration: underline; }
   inset: 10%;
 }
 
+/* ---------- Widgets table ---------- */
+
+.widget-table {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius);
+}
+
+.widget-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.widget-table th,
+.widget-table td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f2f2f2;
+  vertical-align: middle;
+}
+
+.widget-table th {
+  font-size: 12px;
+  color: var(--ig-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: #fafafa;
+}
+
+.widget-table tr:last-child td { border-bottom: 0; }
+
+.widget-table code {
+  background: #f2f2f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.tag-stack {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn.danger { color: var(--ig-danger); border-color: transparent; }
+.btn.danger:hover { background: #fdecea; }
+
+.post-modal__tag {
+  background: #f1f5ff;
+  color: var(--ig-accent);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
 @media (max-width: 800px) {
   .panel-grid.two-col { grid-template-columns: 1fr; }
   .admin-nav { overflow-x: auto; }
