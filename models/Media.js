@@ -12,10 +12,12 @@ async function replaceForPost(postId, mediaItems) {
       await conn.execute(
         `INSERT INTO instagram_media
            (post_id, position, child_post_id, child_shortcode, media_type,
-            media_url, local_path, thumbnail_url, alt_text, width, height)
+            media_url, local_path, local_thumbnail_path, thumbnail_url,
+            alt_text, width, height)
          VALUES
            (:post_id, :position, :child_post_id, :child_shortcode, :media_type,
-            :media_url, :local_path, :thumbnail_url, :alt_text, :width, :height)`,
+            :media_url, :local_path, :local_thumbnail_path, :thumbnail_url,
+            :alt_text, :width, :height)`,
         {
           post_id: postId,
           position: m.position || 0,
@@ -24,6 +26,7 @@ async function replaceForPost(postId, mediaItems) {
           media_type: m.media_type,
           media_url: m.media_url,
           local_path: m.local_path || null,
+          local_thumbnail_path: m.local_thumbnail_path || null,
           thumbnail_url: m.thumbnail_url || null,
           alt_text: m.alt_text || null,
           width: m.width || null,
@@ -64,12 +67,17 @@ async function findByPostIds(postIds) {
 }
 
 async function findMissingLocal(limit = 100) {
+  // Consider a media row "missing" if either the primary file or the
+  // thumbnail is absent, so the redownload action can fill in whichever
+  // side is missing without re-ingesting the whole post.
   const [rows] = await pool.query(
     `SELECT m.id, m.post_id, m.position, m.media_type, m.media_url,
-            m.thumbnail_url, p.username
+            m.thumbnail_url, m.local_path, m.local_thumbnail_path,
+            p.username
        FROM instagram_media m
        JOIN instagram_posts p ON p.post_id = m.post_id
       WHERE m.local_path IS NULL
+         OR (m.thumbnail_url IS NOT NULL AND m.local_thumbnail_path IS NULL)
       ORDER BY m.id ASC
       LIMIT ${Number(limit) || 100}`
   );
@@ -95,10 +103,21 @@ async function clearLocalPath(id) {
   );
 }
 
-async function setLocalPath(id, localPath) {
+async function setLocalPaths(id, { local_path, local_thumbnail_path }) {
+  const sets = [];
+  const params = { id };
+  if (local_path !== undefined) {
+    sets.push('local_path = :local_path');
+    params.local_path = local_path;
+  }
+  if (local_thumbnail_path !== undefined) {
+    sets.push('local_thumbnail_path = :local_thumbnail_path');
+    params.local_thumbnail_path = local_thumbnail_path;
+  }
+  if (!sets.length) return;
   await pool.execute(
-    'UPDATE instagram_media SET local_path = :local_path WHERE id = :id',
-    { id, local_path: localPath }
+    `UPDATE instagram_media SET ${sets.join(', ')} WHERE id = :id`,
+    params
   );
 }
 
@@ -109,5 +128,5 @@ module.exports = {
   findMissingLocal,
   findBadVideoMirrors,
   clearLocalPath,
-  setLocalPath,
+  setLocalPaths,
 };

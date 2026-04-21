@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS instagram_media (
   media_type     VARCHAR(16)   NOT NULL,
   media_url      VARCHAR(2048) NOT NULL,
   local_path     VARCHAR(1024) NULL,
+  local_thumbnail_path VARCHAR(1024) NULL,
   thumbnail_url  VARCHAR(2048) NULL,
   alt_text       TEXT          NULL,
   width          INT UNSIGNED  NULL,

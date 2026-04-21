@@ -35,14 +35,12 @@
         if (altText.length > 80) altText = altText.slice(0, 80) + '…';
         if (!altText) altText = '@' + (post.username || 'post');
       %>
-      <% if (first && first.local_url) { %>
-        <% if (first.media_type === 'video') { %>
-          <video controls playsinline preload="metadata" poster="<%= first.thumbnail_url || '' %>">
-            <source src="<%= first.local_url %>" />
-          </video>
-        <% } else { %>
-          <img src="<%= first.local_url %>" alt="<%= altText %>" />
-        <% } %>
+      <% if (first && first.media_type === 'video' && first.local_url) { %>
+        <video controls playsinline preload="metadata" poster="<%= first.local_thumbnail_url || '' %>">
+          <source src="<%= first.local_url %>" />
+        </video>
+      <% } else if (first && (first.local_url || first.local_thumbnail_url)) { %>
+        <img src="<%= first.local_url || first.local_thumbnail_url %>" alt="<%= altText %>" />
       <% } else { %>
         <div class="widget-placeholder widget-placeholder--gradient">
           <span><%= (post.username || '?').slice(0, 1).toUpperCase() %></span>
