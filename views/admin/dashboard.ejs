@@ -57,6 +57,21 @@
         </div>
 
         <div class="panel-card">
+          <h2>Repair broken media</h2>
+          <p class="muted">
+            Re-downloads any post whose image or video failed to mirror during
+            ingest. Good to run if your feed shows black tiles with alt text.
+          </p>
+          <form method="POST" action="/admin/media/redownload" class="stack">
+            <label class="field">
+              <span>Batch size</span>
+              <input type="number" name="limit" min="1" max="500" value="100" />
+            </label>
+            <button class="btn btn-ghost" type="submit">Redownload missing media</button>
+          </form>
+        </div>
+
+        <div class="panel-card">
           <h2>Recent posts</h2>
           <% if (!recent.length) { %>
             <p class="muted">No posts yet. Trigger a fetch to get started.</p>
