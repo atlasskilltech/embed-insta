@@ -1,8 +1,34 @@
 const fs = require('fs');
 const fsp = fs.promises;
+const { pipeline } = require('stream/promises');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 const axios = require('axios');
 const config = require('../config');
+
+// Fresh agents with keepAlive off so a failed download can't leak error
+// listeners onto a reused TLS socket (the source of the recurring
+// MaxListenersExceededWarning on long fetches).
+const httpAgent = new http.Agent({ keepAlive: false });
+const httpsAgent = new https.Agent({ keepAlive: false });
+
+const downloader = axios.create({
+  httpAgent,
+  httpsAgent,
+  timeout: 60000,
+  maxRedirects: 5,
+  responseType: 'stream',
+  headers: {
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
+      '(KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    Accept: 'image/*,video/*,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    Referer: 'https://www.instagram.com/',
+  },
+  validateStatus: (s) => s >= 200 && s < 300,
+});
 
 function sanitizeSegment(value, fallback) {
   const s = String(value || fallback || 'unknown').replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -24,27 +50,37 @@ async function ensureDir(dir) {
   await fsp.mkdir(dir, { recursive: true });
 }
 
+function describeError(err) {
+  if (!err) return 'unknown error';
+  if (err.response) {
+    const status = err.response.status;
+    const statusText = err.response.statusText || '';
+    return `HTTP ${status}${statusText ? ' ' + statusText : ''}`;
+  }
+  if (err.code) return `${err.code}${err.message ? ' (' + err.message + ')' : ''}`;
+  return err.message || String(err);
+}
+
 async function downloadFile(url, destAbs) {
-  const res = await axios.get(url, {
-    responseType: 'stream',
-    timeout: 60000,
-    maxRedirects: 5,
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
-        '(KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-      Accept: 'image/*,video/*,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-    validateStatus: (s) => s >= 200 && s < 300,
-  });
-  await new Promise((resolve, reject) => {
-    const out = fs.createWriteStream(destAbs);
-    res.data.pipe(out);
-    out.on('finish', resolve);
-    out.on('error', reject);
-    res.data.on('error', reject);
-  });
+  let res;
+  try {
+    res = await downloader.get(url);
+  } catch (err) {
+    // If the server answered with a non-2xx, axios still attaches the
+    // response stream — drain it so the TCP socket can be reused/closed
+    // instead of leaking listeners.
+    const stream = err && err.response && err.response.data;
+    if (stream && typeof stream.resume === 'function') stream.resume();
+    throw new Error(describeError(err));
+  }
+
+  try {
+    await pipeline(res.data, fs.createWriteStream(destAbs));
+  } catch (err) {
+    if (res.data && typeof res.data.resume === 'function') res.data.resume();
+    await fsp.rm(destAbs, { force: true }).catch(() => {});
+    throw new Error(describeError(err));
+  }
 }
 
 async function downloadMedia({ username, post_id, media_type, media_url, position }) {
@@ -68,7 +104,7 @@ async function downloadMedia({ username, post_id, media_type, media_url, positio
     };
   } catch (err) {
     console.warn(
-      `[media] failed to download ${media_url} for post ${post_id}: ${err.message}`
+      `[media] failed to download for post ${post_id} (${media_url.slice(0, 120)}…): ${err.message}`
     );
     return null;
   }
