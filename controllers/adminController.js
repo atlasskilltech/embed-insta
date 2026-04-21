@@ -1,3 +1,5 @@
+const path = require('path');
+const fsp = require('fs').promises;
 const AdminUser = require('../models/AdminUser');
 const WidgetSettings = require('../models/WidgetSettings');
 const Post = require('../models/Post');
@@ -243,6 +245,22 @@ function settingsPage(req, res) {
 async function redownloadMissingMedia(req, res) {
   const limit = Math.min(Math.max(parseInt(req.body.limit || req.query.limit, 10) || 100, 1), 500);
   try {
+    // Clear videos that were previously mirrored with a non-video
+    // extension (Instagram video URLs contain ".png" / ".jpg" in their
+    // path so older ingests saved the MP4 bytes as image/png). Removing
+    // the file + clearing local_path lets the download loop below
+    // re-mirror them with the correct .mp4 extension.
+    const badVideos = await Media.findBadVideoMirrors();
+    let cleaned = 0;
+    for (const m of badVideos) {
+      if (m.local_path) {
+        const abs = path.resolve(config.media.absDir, m.local_path);
+        await fsp.rm(abs, { force: true }).catch(() => {});
+      }
+      await Media.clearLocalPath(m.id);
+      cleaned += 1;
+    }
+
     const missing = await Media.findMissingLocal(limit);
     let downloaded = 0;
     let failed = 0;
@@ -262,12 +280,19 @@ async function redownloadMissingMedia(req, res) {
       }
     }
     const message =
-      `Redownload: ${downloaded} succeeded, ${failed} failed, ` +
+      `Redownload: cleaned ${cleaned} mis-extensioned videos, ` +
+      `${downloaded} succeeded, ${failed} failed, ` +
       `${missing.length} attempted (up to ${limit}).`;
     if (req.accepts(['html', 'json']) === 'json') {
-      return res.json({ ok: true, downloaded, failed, attempted: missing.length });
+      return res.json({
+        ok: true,
+        cleaned,
+        downloaded,
+        failed,
+        attempted: missing.length,
+      });
     }
-    setFlash(req, downloaded ? 'success' : 'error', message);
+    setFlash(req, downloaded || cleaned ? 'success' : 'error', message);
     return res.redirect('/admin');
   } catch (err) {
     console.error('[admin] redownload failed:', err);

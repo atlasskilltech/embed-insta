@@ -76,6 +76,25 @@ async function findMissingLocal(limit = 100) {
   return rows;
 }
 
+async function findBadVideoMirrors() {
+  const [rows] = await pool.query(
+    `SELECT id, local_path FROM instagram_media
+      WHERE media_type = 'video'
+        AND local_path IS NOT NULL
+        AND local_path NOT LIKE '%.mp4'
+        AND local_path NOT LIKE '%.webm'
+        AND local_path NOT LIKE '%.mov'`
+  );
+  return rows;
+}
+
+async function clearLocalPath(id) {
+  await pool.execute(
+    'UPDATE instagram_media SET local_path = NULL WHERE id = :id',
+    { id }
+  );
+}
+
 async function setLocalPath(id, localPath) {
   await pool.execute(
     'UPDATE instagram_media SET local_path = :local_path WHERE id = :id',
@@ -88,5 +107,7 @@ module.exports = {
   findByPostId,
   findByPostIds,
   findMissingLocal,
+  findBadVideoMirrors,
+  clearLocalPath,
   setLocalPath,
 };

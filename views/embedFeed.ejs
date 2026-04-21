@@ -23,6 +23,14 @@
   const layout = settings.layout || 'grid';
   const visible = posts.slice(0, settings.max_items || 9);
 
+  function htmlAttr(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   function shortAlt(text, username) {
     if (!text) return '@' + (username || 'post');
     var s = String(text).replace(/\s+/g, ' ').trim();
@@ -30,7 +38,7 @@
   }
 
   function placeholderTile(post) {
-    var initial = (post.username || '?').slice(0, 1).toUpperCase();
+    var initial = htmlAttr((post.username || '?').slice(0, 1).toUpperCase());
     return (
       '<div class="widget-placeholder widget-placeholder--gradient">' +
         '<span>' + initial + '</span>' +
@@ -42,40 +50,39 @@
     const cover = post.media[0];
     if (!cover) return placeholderTile(post);
 
+    var initial = (post.username || '?').slice(0, 1).toUpperCase();
+
     if (cover.media_type === 'video') {
-      if (!cover.local_url && !cover.thumbnail_url) return placeholderTile(post);
+      if (!cover.local_url) return placeholderTile(post);
       return (
-        '<video muted playsinline preload="metadata" poster="' +
-        (cover.thumbnail_url || '') + '"' +
-        ' onerror="this.parentNode.innerHTML=\'' + placeholderTile(post).replace(/'/g, "\\'") + '\'">' +
-        (cover.local_url
-          ? '<source src="' + cover.local_url + '" />'
-          : '') +
+        '<video class="w-media" muted playsinline preload="metadata"' +
+        ' poster="' + htmlAttr(cover.thumbnail_url || '') + '"' +
+        ' data-fallback-initial="' + htmlAttr(initial) + '">' +
+        '<source src="' + htmlAttr(cover.local_url) + '" />' +
         '</video>'
       );
     }
 
-    // Only serve our own mirrored copy. Instagram CDN URLs (media_url,
-    // thumbnail_url) reject anonymous cross-origin browser loads and
-    // render as a broken image, so fall back to a themed placeholder.
+    // Only serve our own mirrored copy. Instagram CDN URLs reject
+    // anonymous cross-origin browser loads so we render a themed
+    // placeholder instead and let the global error handler swap any
+    // runtime failures for the same placeholder.
     if (!cover.local_url) return placeholderTile(post);
 
     var alt = shortAlt(cover.alt_text, post.username);
     return (
-      '<img loading="lazy" src="' + cover.local_url + '"' +
-      ' alt="' + alt.replace(/"/g, '&quot;') + '"' +
-      ' onerror="this.onerror=null;this.outerHTML=\'' +
-        placeholderTile(post).replace(/'/g, "\\'") + '\'"' +
-      ' />'
+      '<img class="w-media" loading="lazy"' +
+      ' src="' + htmlAttr(cover.local_url) + '"' +
+      ' alt="' + htmlAttr(alt) + '"' +
+      ' data-fallback-initial="' + htmlAttr(initial) + '" />'
     );
   }
 
   function cardAttrs(post) {
     return (
-      'class="widget-card"' +
-      ' href="/post/' + post.post_id + '"' +
-      ' data-post-id="' + post.post_id + '"' +
-      ' data-permalink="' + (post.permalink || '') + '"' +
+      'href="/post/' + htmlAttr(post.post_id) + '"' +
+      ' data-post-id="' + htmlAttr(post.post_id) + '"' +
+      ' data-permalink="' + htmlAttr(post.permalink || '') + '"' +
       ' rel="noopener"'
     );
   }
@@ -186,6 +193,35 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Swap broken <img>/<video> for a themed placeholder so nothing leaks
+  // the 404 state into the design.
+  (function () {
+    function replaceWithPlaceholder(el) {
+      var initial = (el && el.dataset && el.dataset.fallbackInitial) || '?';
+      var ph = document.createElement('div');
+      ph.className = 'widget-placeholder widget-placeholder--gradient';
+      var span = document.createElement('span');
+      span.textContent = initial;
+      ph.appendChild(span);
+      if (el && el.parentNode) el.parentNode.replaceChild(ph, el);
+    }
+    document.addEventListener(
+      'error',
+      function (e) {
+        var t = e.target;
+        if (!t || !t.tagName) return;
+        var isMedia = t.tagName === 'IMG' || t.tagName === 'VIDEO' || t.tagName === 'SOURCE';
+        if (!isMedia || !t.closest) return;
+        if (t.closest('.widget-thumb') || t.closest('.post-modal__media')) {
+          replaceWithPlaceholder(t.tagName === 'SOURCE' ? t.parentNode : t);
+        }
+      },
+      true
+    );
+  })();
+</script>
 
 <% if (layout === 'slider') { %>
   <script>
