@@ -28,11 +28,16 @@ async function ingest(options = {}) {
             post_id: post.post_id,
             media_type: m.media_type,
             media_url: m.media_url,
+            thumbnail_url: m.thumbnail_url,
             position: m.position,
           });
           if (local) downloadedMedia += 1;
         }
-        enriched.push({ ...m, local_path: local ? local.local_path : null });
+        enriched.push({
+          ...m,
+          local_path: local ? local.local_path : null,
+          local_thumbnail_path: local ? local.local_thumbnail_path : null,
+        });
       }
 
       if (enriched.length) {

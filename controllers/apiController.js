@@ -69,6 +69,9 @@ function postToPublic(post, media = [], comments = []) {
       media_type: m.media_type,
       media_url: m.media_url,
       local_url: m.local_path ? `${config.media.urlPrefix}/${m.local_path}` : null,
+      local_thumbnail_url: m.local_thumbnail_path
+        ? `${config.media.urlPrefix}/${m.local_thumbnail_path}`
+        : null,
       thumbnail_url: m.thumbnail_url,
       alt_text: m.alt_text,
       width: m.width,

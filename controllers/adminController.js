@@ -270,10 +270,18 @@ async function redownloadMissingMedia(req, res) {
         post_id: m.post_id,
         media_type: m.media_type,
         media_url: m.media_url,
+        thumbnail_url: m.thumbnail_url,
         position: m.position,
+        skip_primary: Boolean(m.local_path),
+        skip_thumbnail: Boolean(m.local_thumbnail_path),
       });
-      if (result && result.local_path) {
-        await Media.setLocalPath(m.id, result.local_path);
+      const paths = {};
+      if (result && result.local_path) paths.local_path = result.local_path;
+      if (result && result.local_thumbnail_path) {
+        paths.local_thumbnail_path = result.local_thumbnail_path;
+      }
+      if (paths.local_path || paths.local_thumbnail_path) {
+        await Media.setLocalPaths(m.id, paths);
         downloaded += 1;
       } else {
         failed += 1;

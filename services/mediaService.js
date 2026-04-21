@@ -131,7 +131,16 @@ async function downloadTo(url, absDir, baseName, mediaType) {
   return { absPath, filename };
 }
 
-async function downloadMedia({ username, post_id, media_type, media_url, position }) {
+async function downloadMedia({
+  username,
+  post_id,
+  media_type,
+  media_url,
+  thumbnail_url,
+  position,
+  skip_primary,
+  skip_thumbnail,
+}) {
   const user = sanitizeSegment(username, 'unknown');
   const pid = sanitizeSegment(post_id, 'post');
   const baseName = String(position || 0);
@@ -140,22 +149,55 @@ async function downloadMedia({ username, post_id, media_type, media_url, positio
   const absDir = path.join(config.media.absDir, relDir);
   await ensureDir(absDir);
 
-  try {
-    const { filename } = await downloadTo(media_url, absDir, baseName, media_type);
-    const relPath = path.posix.join(
-      relDir.split(path.sep).join('/'),
-      filename
-    );
-    return {
-      local_path: relPath,
-      public_url: `${config.media.urlPrefix}/${relPath}`,
-    };
-  } catch (err) {
-    console.warn(
-      `[media] failed to download for post ${post_id} (${media_url.slice(0, 120)}…): ${err.message}`
-    );
-    return null;
+  const result = { local_path: null, local_thumbnail_path: null };
+
+  if (!skip_primary && media_url) {
+    try {
+      const { filename } = await downloadTo(media_url, absDir, baseName, media_type);
+      result.local_path = path.posix.join(
+        relDir.split(path.sep).join('/'),
+        filename
+      );
+    } catch (err) {
+      console.warn(
+        `[media] failed to download primary for post ${post_id} ` +
+          `(${media_url.slice(0, 120)}…): ${err.message}`
+      );
+    }
   }
+
+  // Image posts usually have media_url === thumbnail_url — reuse the
+  // primary file as the thumbnail instead of downloading it twice.
+  if (
+    !skip_thumbnail &&
+    thumbnail_url &&
+    media_type === 'image' &&
+    result.local_path &&
+    thumbnail_url === media_url
+  ) {
+    result.local_thumbnail_path = result.local_path;
+  } else if (!skip_thumbnail && thumbnail_url) {
+    try {
+      const { filename } = await downloadTo(
+        thumbnail_url,
+        absDir,
+        `${baseName}.thumb`,
+        'image'
+      );
+      result.local_thumbnail_path = path.posix.join(
+        relDir.split(path.sep).join('/'),
+        filename
+      );
+    } catch (err) {
+      console.warn(
+        `[media] failed to download thumbnail for post ${post_id} ` +
+          `(${thumbnail_url.slice(0, 120)}…): ${err.message}`
+      );
+    }
+  }
+
+  if (!result.local_path && !result.local_thumbnail_path) return null;
+  return result;
 }
 
 module.exports = { downloadMedia };

@@ -51,28 +51,17 @@
     if (!cover) return placeholderTile(post);
 
     var initial = (post.username || '?').slice(0, 1).toUpperCase();
-
-    if (cover.media_type === 'video') {
-      if (!cover.local_url) return placeholderTile(post);
-      return (
-        '<video class="w-media" muted playsinline preload="metadata"' +
-        ' poster="' + htmlAttr(cover.thumbnail_url || '') + '"' +
-        ' data-fallback-initial="' + htmlAttr(initial) + '">' +
-        '<source src="' + htmlAttr(cover.local_url) + '" />' +
-        '</video>'
-      );
-    }
-
-    // Only serve our own mirrored copy. Instagram CDN URLs reject
-    // anonymous cross-origin browser loads so we render a themed
-    // placeholder instead and let the global error handler swap any
-    // runtime failures for the same placeholder.
-    if (!cover.local_url) return placeholderTile(post);
+    // The grid is a preview, always render a still image. Videos use
+    // the locally-mirrored poster (falls back to the first image frame
+    // for image posts that deduped thumbnail and primary into one
+    // file). No CDN URLs leak to the browser.
+    var src = cover.local_thumbnail_url || cover.local_url;
+    if (!src) return placeholderTile(post);
 
     var alt = shortAlt(cover.alt_text, post.username);
     return (
       '<img class="w-media" loading="lazy"' +
-      ' src="' + htmlAttr(cover.local_url) + '"' +
+      ' src="' + htmlAttr(src) + '"' +
       ' alt="' + htmlAttr(alt) + '"' +
       ' data-fallback-initial="' + htmlAttr(initial) + '" />'
     );
@@ -317,19 +306,23 @@
     var items = (post.media && post.media.length) ? post.media : [];
     if (!items.length) return '<div class="post-modal__media">' + placeholderTile(post) + '</div>';
     var m = items[galleryIndex] || items[0];
-    var src = m.local_url;
     var inner;
-    if (!src) {
-      inner = placeholderTile(post);
-    } else if (m.media_type === 'video') {
+    if (m.media_type === 'video' && m.local_url) {
       inner = '<video controls playsinline preload="metadata" poster="' +
-        escapeHtml(m.thumbnail_url || '') + '">' +
-        '<source src="' + escapeHtml(src) + '" /></video>';
+        escapeHtml(m.local_thumbnail_url || '') + '">' +
+        '<source src="' + escapeHtml(m.local_url) + '" /></video>';
     } else {
-      var altText = m.alt_text ? String(m.alt_text).replace(/\s+/g, ' ').trim() : '';
-      if (altText.length > 80) altText = altText.slice(0, 80) + '…';
-      if (!altText) altText = '@' + (post.username || 'post');
-      inner = '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(altText) + '" />';
+      // Image post, or video whose mp4 is missing: fall back to the
+      // mirrored still image so the modal always renders something.
+      var src = m.local_url || m.local_thumbnail_url;
+      if (!src) {
+        inner = placeholderTile(post);
+      } else {
+        var altText = m.alt_text ? String(m.alt_text).replace(/\s+/g, ' ').trim() : '';
+        if (altText.length > 80) altText = altText.slice(0, 80) + '…';
+        if (!altText) altText = '@' + (post.username || 'post');
+        inner = '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(altText) + '" />';
+      }
     }
     var nav = '';
     if (items.length > 1) {
