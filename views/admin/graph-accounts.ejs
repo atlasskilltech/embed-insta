@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'graph'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1>Graph API accounts</h1>
+          <p class="muted">
+            Pull posts directly from Meta's official Graph API using a
+            long-lived Page access token. Runs on the same cron as the
+            Apify scraper and inherits the downstream media pipeline,
+            so previews, the embed widget, and the proxy all keep
+            working unchanged.
+          </p>
+        </div>
+        <div class="admin-actions">
+          <form method="POST" action="/admin/graph/fetch" class="inline">
+            <button type="submit" class="btn btn-primary" <%= accounts.length ? '' : 'disabled' %>>
+              Fetch all active
+            </button>
+          </form>
+          <a class="btn btn-ghost" href="/admin/graph/new">Add account</a>
+        </div>
+      </header>
+
+      <% if (!accounts.length) { %>
+        <div class="panel-card">
+          <p class="muted">
+            No Graph API accounts yet.
+            <a href="/admin/graph/new">Add one</a> with your Instagram
+            Business Account ID and a 60-day Page access token.
+          </p>
+        </div>
+      <% } else { %>
+        <div class="panel-card no-pad">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>IG Business ID</th>
+                <th>Token</th>
+                <th>API</th>
+                <th>Limit</th>
+                <th>Status</th>
+                <th>Last fetched</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% accounts.forEach(function(a) { %>
+                <tr>
+                  <td>
+                    <a href="/admin/graph/<%= a.id %>"><strong><%= a.label %></strong></a>
+                    <% if (a.fb_page_id) { %><br/><span class="muted small">FB page <%= a.fb_page_id %></span><% } %>
+                  </td>
+                  <td><code><%= a.ig_business_id %></code></td>
+                  <td><code><%= a.masked_token %></code></td>
+                  <td><%= a.api_version %></td>
+                  <td><%= a.results_limit %></td>
+                  <td>
+                    <% if (a.is_active) { %>
+                      <span class="badge badge-success">active</span>
+                    <% } else { %>
+                      <span class="badge badge-muted">paused</span>
+                    <% } %>
+                    <% if (a.last_error) { %>
+                      <br/><span class="muted small" title="<%= a.last_error %>">⚠ error</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (a.last_fetched_at) { %>
+                      <span class="muted small"><%= a.last_fetched_at %></span>
+                    <% } else { %>
+                      <span class="muted small">never</span>
+                    <% } %>
+                  </td>
+                  <td class="nowrap">
+                    <form method="POST" action="/admin/graph/<%= a.id %>/fetch" class="inline">
+                      <button type="submit" class="btn btn-ghost btn-sm" <%= a.is_active ? '' : 'disabled' %>>Fetch</button>
+                    </form>
+                    <form
+                      method="POST"
+                      action="/admin/graph/<%= a.id %>/delete"
+                      class="inline"
+                      onsubmit="return confirm('Delete account &quot;<%= a.label %>&quot;? This does not delete its posts.');"
+                    >
+                      <button type="submit" class="btn btn-ghost btn-sm danger">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

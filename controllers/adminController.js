@@ -4,7 +4,8 @@ const AdminUser = require('../models/AdminUser');
 const WidgetSettings = require('../models/WidgetSettings');
 const Post = require('../models/Post');
 const Media = require('../models/Media');
-const { ingest } = require('../services/ingestService');
+const GraphAccount = require('../models/GraphAccount');
+const { ingest, ingestFromGraph, ingestGraphAccount } = require('../services/ingestService');
 const { downloadMedia } = require('../services/mediaService');
 const config = require('../config');
 
@@ -79,9 +80,10 @@ function logout(req, res) {
 
 async function dashboard(req, res, next) {
   try {
-    const [settings, posts] = await Promise.all([
+    const [settings, posts, graphAccounts] = await Promise.all([
       WidgetSettings.getActive(),
       Post.listPosts({ page: 1, pageSize: 8 }),
+      GraphAccount.list().catch(() => []),
     ]);
     res.render('admin/dashboard', {
       title: 'Admin Dashboard',
@@ -90,6 +92,10 @@ async function dashboard(req, res, next) {
       stats: { totalPosts: posts.total },
       recent: posts.rows,
       defaultTargets: config.targets,
+      graphAccounts: graphAccounts.map((a) => ({
+        ...a,
+        masked_token: GraphAccount.maskToken(a.access_token),
+      })),
       baseUrl: config.baseUrl,
     });
   } catch (err) {
@@ -345,6 +351,184 @@ async function fetchNow(req, res, next) {
   }
 }
 
+function bodyToGraphPatch(body) {
+  return {
+    label: body.label,
+    ig_business_id: body.ig_business_id,
+    fb_page_id: body.fb_page_id || null,
+    access_token: body.access_token,
+    api_version: body.api_version || 'v21.0',
+    results_limit: body.results_limit,
+    include_comments: body.include_comments === 'on' || body.include_comments === '1',
+    is_active: body.is_active === undefined
+      ? undefined
+      : body.is_active === 'on' || body.is_active === '1',
+  };
+}
+
+async function graphAccountsList(req, res, next) {
+  try {
+    const rows = await GraphAccount.list();
+    res.render('admin/graph-accounts', {
+      title: 'Graph API accounts',
+      layout: false,
+      accounts: rows.map((a) => ({
+        ...a,
+        masked_token: GraphAccount.maskToken(a.access_token),
+      })),
+      baseUrl: config.baseUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function graphAccountNewPage(req, res, next) {
+  try {
+    res.render('admin/graph-account-edit', {
+      title: 'Add Graph API account',
+      layout: false,
+      mode: 'create',
+      account: {
+        label: '',
+        ig_business_id: '',
+        fb_page_id: '',
+        access_token: '',
+        api_version: 'v21.0',
+        results_limit: 25,
+        include_comments: false,
+        is_active: true,
+      },
+      error: null,
+      baseUrl: config.baseUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function graphAccountCreate(req, res, next) {
+  const body = req.body || {};
+  try {
+    // Patch includes only provided fields; fill sensible defaults for
+    // create so missing checkboxes don't silently go false.
+    const patch = bodyToGraphPatch(body);
+    if (patch.is_active === undefined) patch.is_active = true;
+    const created = await GraphAccount.create(patch);
+    setFlash(req, 'success', `Graph account "${created.label}" added.`);
+    res.redirect('/admin/graph');
+  } catch (err) {
+    res.status(400).render('admin/graph-account-edit', {
+      title: 'Add Graph API account',
+      layout: false,
+      mode: 'create',
+      account: {
+        label: body.label || '',
+        ig_business_id: body.ig_business_id || '',
+        fb_page_id: body.fb_page_id || '',
+        access_token: body.access_token || '',
+        api_version: body.api_version || 'v21.0',
+        results_limit: body.results_limit || 25,
+        include_comments: body.include_comments === 'on',
+        is_active: body.is_active !== undefined ? body.is_active === 'on' : true,
+      },
+      error: err.message,
+      baseUrl: config.baseUrl,
+    });
+  }
+}
+
+async function graphAccountEditPage(req, res, next) {
+  try {
+    const account = await GraphAccount.findById(req.params.id);
+    if (!account) return res.status(404).render('404', { title: 'Account not found' });
+    res.render('admin/graph-account-edit', {
+      title: `Graph API · ${account.label}`,
+      layout: false,
+      mode: 'edit',
+      account: {
+        ...account,
+        masked_token: GraphAccount.maskToken(account.access_token),
+      },
+      error: null,
+      baseUrl: config.baseUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function graphAccountUpdate(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const account = await GraphAccount.findById(id);
+    if (!account) return res.status(404).render('404', { title: 'Account not found' });
+    const body = req.body || {};
+    const patch = bodyToGraphPatch(body);
+    // Preserve existing token if the form left it blank (UI shows a
+    // masked value; an empty submit means "don't rotate").
+    if (!patch.access_token) delete patch.access_token;
+    // Checkboxes collapse to undefined when unchecked — force false so
+    // the user can actually turn them off.
+    if (patch.is_active === undefined) patch.is_active = false;
+    if (patch.include_comments === undefined) patch.include_comments = false;
+    await GraphAccount.update(id, patch);
+    setFlash(req, 'success', `Graph account "${account.label}" updated.`);
+    res.redirect(`/admin/graph/${id}`);
+  } catch (err) {
+    setFlash(req, 'error', err.message);
+    res.redirect(`/admin/graph/${req.params.id}`);
+  }
+}
+
+async function graphAccountDelete(req, res) {
+  try {
+    await GraphAccount.remove(Number(req.params.id));
+    setFlash(req, 'success', 'Graph account removed.');
+  } catch (err) {
+    setFlash(req, 'error', `Delete failed: ${err.message}`);
+  }
+  res.redirect('/admin/graph');
+}
+
+async function graphFetchNow(req, res) {
+  const wantsJson = req.accepts(['html', 'json']) === 'json';
+  const id = req.params.id ? Number(req.params.id) : null;
+  try {
+    let summary;
+    if (id) {
+      const account = await GraphAccount.findById(id);
+      if (!account) {
+        if (wantsJson) return res.status(404).json({ ok: false, error: 'not found' });
+        setFlash(req, 'error', 'Graph account not found.');
+        return res.redirect('/admin/graph');
+      }
+      summary = await ingestGraphAccount(account, {
+        downloadMedia: !(req.body && req.body.downloadMedia === 'off'),
+      });
+      await GraphAccount.markFetched(account.id);
+    } else {
+      summary = await ingestFromGraph({
+        downloadMedia: !(req.body && req.body.downloadMedia === 'off'),
+      });
+    }
+    if (wantsJson) return res.json({ ok: true, summary });
+    const msg = id
+      ? `Graph fetch: ${summary.fetched} items, ${summary.savedPosts} posts, ${summary.savedMedia} media.`
+      : `Graph fetch: ${summary.savedPosts} posts across ${summary.accounts ? summary.accounts.length : 0} account(s).`;
+    setFlash(req, 'success', msg);
+    res.redirect(id ? `/admin/graph/${id}` : '/admin/graph');
+  } catch (err) {
+    console.error('[admin] graph fetch failed:', err);
+    if (id && err && err.message) {
+      await GraphAccount.markError(id, err.message).catch(() => {});
+    }
+    if (wantsJson) return res.status(500).json({ ok: false, error: err.message });
+    setFlash(req, 'error', `Graph fetch failed: ${err.message}`);
+    res.redirect(id ? `/admin/graph/${id}` : '/admin/graph');
+  }
+}
+
 module.exports = {
   loginPage,
   loginSubmit,
@@ -359,4 +543,11 @@ module.exports = {
   widgetDelete,
   fetchNow,
   redownloadMissingMedia,
+  graphAccountsList,
+  graphAccountNewPage,
+  graphAccountCreate,
+  graphAccountEditPage,
+  graphAccountUpdate,
+  graphAccountDelete,
+  graphFetchNow,
 };

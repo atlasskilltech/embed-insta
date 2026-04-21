@@ -208,4 +208,193 @@ function normalizeBatch(items) {
   return out;
 }
 
-module.exports = { normalize, normalizeBatch, extractShortcode };
+// ---- Graph API adapter ----------------------------------------------------
+// Meta's Graph API returns a different shape than the Apify scraper. We
+// map it onto the same canonical { post, media, comments } structure so
+// the downstream ingest/save loop is source-agnostic.
+
+function mapGraphType(mediaType, productType) {
+  const mt = String(mediaType || '').toUpperCase();
+  if (mt === 'CAROUSEL_ALBUM') return 'carousel';
+  if (mt === 'VIDEO') return 'video';
+  if (mt === 'IMAGE') return 'image';
+  if (String(productType || '').toUpperCase() === 'REELS') return 'video';
+  return 'image';
+}
+
+function childToMedia(child, position) {
+  const type = String(child.media_type || '').toUpperCase();
+  const isVideo = type === 'VIDEO';
+  const primary = isVideo ? child.media_url : child.media_url || child.thumbnail_url;
+  if (!primary) return null;
+  return {
+    position,
+    child_post_id: child.id ? String(child.id) : null,
+    child_shortcode: child.shortcode || null,
+    media_type: isVideo ? 'video' : 'image',
+    media_url: primary,
+    thumbnail_url: child.thumbnail_url || (isVideo ? null : child.media_url) || null,
+    alt_text: null,
+    width: null,
+    height: null,
+  };
+}
+
+function collectGraphMedia(item) {
+  const out = [];
+  const type = String(item.media_type || '').toUpperCase();
+
+  if (type === 'CAROUSEL_ALBUM') {
+    const children = (item.children && Array.isArray(item.children.data) && item.children.data) || [];
+    children.forEach((child, i) => {
+      const m = childToMedia(child, i);
+      if (m) out.push(m);
+    });
+    return out;
+  }
+
+  const isVideo = type === 'VIDEO';
+  const primary = isVideo ? item.media_url : item.media_url || item.thumbnail_url;
+  if (!primary) return out;
+
+  out.push({
+    position: 0,
+    child_post_id: null,
+    child_shortcode: null,
+    media_type: isVideo ? 'video' : 'image',
+    media_url: primary,
+    thumbnail_url: item.thumbnail_url || (isVideo ? null : item.media_url) || null,
+    alt_text: null,
+    width: null,
+    height: null,
+  });
+  return out;
+}
+
+function collectGraphComments(item) {
+  const list = (item._comments && Array.isArray(item._comments)) ? item._comments : [];
+  const out = [];
+  for (const c of list) {
+    if (!c || !c.id) continue;
+    out.push({
+      comment_id: String(c.id),
+      owner_username: c.username || null,
+      owner_id: null,
+      text: c.text || null,
+      likes_count: toInt(c.like_count) || 0,
+      replies_count: 0,
+      parent_comment_id: null,
+      posted_at: parseDate(c.timestamp),
+    });
+    if (c.replies && Array.isArray(c.replies.data)) {
+      for (const r of c.replies.data) {
+        if (!r || !r.id) continue;
+        out.push({
+          comment_id: String(r.id),
+          owner_username: r.username || null,
+          owner_id: null,
+          text: r.text || null,
+          likes_count: toInt(r.like_count) || 0,
+          replies_count: 0,
+          parent_comment_id: String(c.id),
+          posted_at: parseDate(r.timestamp),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function graphCoverUrl(item) {
+  if (item.thumbnail_url) return item.thumbnail_url;
+  if (item.media_url) return item.media_url;
+  const children = (item.children && Array.isArray(item.children.data) && item.children.data) || [];
+  for (const c of children) {
+    const type = String(c.media_type || '').toUpperCase();
+    if (type === 'IMAGE' && c.media_url) return c.media_url;
+    if (type === 'VIDEO' && c.thumbnail_url) return c.thumbnail_url;
+  }
+  for (const c of children) {
+    if (c.media_url) return c.media_url;
+    if (c.thumbnail_url) return c.thumbnail_url;
+  }
+  return null;
+}
+
+function normalizeGraphItem(item) {
+  if (!item || !item.id) return null;
+
+  const permalink = item.permalink || null;
+  const shortcode = item.shortcode || extractShortcode(permalink);
+  const postId = String(item.id);
+
+  const username =
+    item.username || (item.owner && item.owner.username) || null;
+  const ownerId = item.owner && item.owner.id ? String(item.owner.id) : null;
+
+  const post = {
+    post_id: postId,
+    shortcode: shortcode || null,
+    username,
+    owner_full_name: null,
+    owner_id: ownerId,
+    caption: item.caption || null,
+    alt_text: null,
+    display_url: graphCoverUrl(item),
+    permalink,
+    input_url: null,
+    post_type: mapGraphType(item.media_type, item.media_product_type),
+    product_type: item.media_product_type
+      ? String(item.media_product_type).toLowerCase()
+      : null,
+    likes_count: toInt(item.like_count) || 0,
+    comments_count: toInt(item.comments_count) || 0,
+    video_url: String(item.media_type).toUpperCase() === 'VIDEO' ? item.media_url : null,
+    video_view_count: null,
+    video_play_count: null,
+    video_duration: null,
+    dimensions_width: null,
+    dimensions_height: null,
+    location_name: null,
+    location_id: null,
+    music_song: null,
+    music_artist: null,
+    music_audio_id: null,
+    hashtags: null,
+    mentions: null,
+    tagged_users_json: null,
+    coauthors_json: null,
+    first_comment: null,
+    is_pinned: 0,
+    is_comments_disabled: item.is_comment_enabled === false ? 1 : 0,
+    posted_at: parseDate(item.timestamp),
+    raw_json: JSON.stringify(item),
+  };
+
+  return {
+    post,
+    media: collectGraphMedia(item),
+    comments: collectGraphComments(item),
+  };
+}
+
+function normalizeGraphBatch(items) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of items || []) {
+    const n = normalizeGraphItem(raw);
+    if (!n) continue;
+    if (seen.has(n.post.post_id)) continue;
+    seen.add(n.post.post_id);
+    out.push(n);
+  }
+  return out;
+}
+
+module.exports = {
+  normalize,
+  normalizeBatch,
+  normalizeGraphItem,
+  normalizeGraphBatch,
+  extractShortcode,
+};
