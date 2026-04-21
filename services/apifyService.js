@@ -8,13 +8,41 @@ function getClient() {
   return new ApifyClient({ token: config.apify.token });
 }
 
-function buildInput({ targets, resultsLimit, includeComments }) {
-  const urls = (targets || []).filter(Boolean);
-  if (urls.length === 0) {
-    throw new Error('At least one Instagram URL target is required');
+const PROFILE_URL_RE = /^https?:\/\/(?:www\.)?instagram\.com\/([^/?#]+)/i;
+const POST_PATH_RE = /\/(?:p|reel|reels|tv)\//i;
+
+function extractUsername(target) {
+  if (!target) return null;
+  const trimmed = String(target).trim();
+  if (!trimmed) return null;
+  if (!trimmed.includes('/')) {
+    return trimmed.replace(/^@/, '').toLowerCase() || null;
   }
-  return {
-    directUrls: urls,
+  if (POST_PATH_RE.test(trimmed)) return null;
+  const match = trimmed.match(PROFILE_URL_RE);
+  if (!match) return null;
+  return match[1].toLowerCase();
+}
+
+function buildInput({ targets, resultsLimit, includeComments }) {
+  const list = (targets || []).map((t) => String(t).trim()).filter(Boolean);
+  if (list.length === 0) {
+    throw new Error('At least one Instagram target is required');
+  }
+
+  const usernames = new Set();
+  const directUrls = [];
+  for (const t of list) {
+    const username = extractUsername(t);
+    if (username) usernames.add(username);
+    if (t.includes('/')) directUrls.push(t);
+  }
+
+  if (usernames.size === 0 && directUrls.length === 0) {
+    throw new Error('No valid Instagram usernames or URLs found in targets');
+  }
+
+  const input = {
     resultsType: 'posts',
     resultsLimit: resultsLimit ?? config.apify.resultsLimit,
     addParentData: false,
@@ -23,6 +51,11 @@ function buildInput({ targets, resultsLimit, includeComments }) {
     includeTaggedPosts: false,
     includeComments: includeComments ?? config.apify.includeComments,
   };
+
+  if (usernames.size > 0) input.username = [...usernames];
+  if (directUrls.length > 0) input.directUrls = directUrls;
+
+  return input;
 }
 
 async function runScraper(options = {}) {
@@ -33,8 +66,13 @@ async function runScraper(options = {}) {
     includeComments: options.includeComments,
   });
 
+  const targetCount =
+    (input.username ? input.username.length : 0) +
+    (input.directUrls ? input.directUrls.length : 0);
   console.log(
-    `[apify] starting actor ${config.apify.actorId} for ${input.directUrls.length} target(s)`
+    `[apify] starting actor ${config.apify.actorId} for ${targetCount} target(s)` +
+      (input.username ? ` users=[${input.username.join(',')}]` : '') +
+      (input.directUrls ? ` urls=${input.directUrls.length}` : '')
   );
   const run = await client.actor(config.apify.actorId).call(input, {
     waitSecs: 300,
