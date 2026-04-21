@@ -59,15 +59,16 @@
         <div class="panel-card">
           <h2>Repair broken media</h2>
           <p class="muted">
-            Re-downloads any post whose image or video failed to mirror during
-            ingest. Good to run if your feed shows black tiles with alt text.
+            Redownloads posts whose image or video failed to mirror during
+            ingest, and fixes reels that were stored under the wrong file
+            extension so the player shows a black screen.
           </p>
           <form method="POST" action="/admin/media/redownload" class="stack">
             <label class="field">
               <span>Batch size</span>
               <input type="number" name="limit" min="1" max="500" value="100" />
             </label>
-            <button class="btn btn-ghost" type="submit">Redownload missing media</button>
+            <button class="btn btn-ghost" type="submit">Redownload &amp; fix media</button>
           </form>
         </div>
 

@@ -35,15 +35,23 @@ function sanitizeSegment(value, fallback) {
   return s.slice(0, 120) || fallback;
 }
 
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
 function guessExtension(url, mediaType) {
+  // Videos ALWAYS get .mp4. Instagram's video URLs can include ".png"
+  // or ".jpg" in their path (it's a CDN transform code, not the real
+  // media format) and saving MP4 bytes under those extensions makes
+  // express-static serve image/png, which <video> refuses to decode.
+  if (mediaType === 'video') return '.mp4';
+
   try {
     const { pathname } = new URL(url);
     const ext = path.extname(pathname).toLowerCase();
-    if (ext && ext.length <= 6) return ext;
+    if (IMAGE_EXT.has(ext)) return ext === '.jpeg' ? '.jpg' : ext;
   } catch (_) {
     /* ignore */
   }
-  return mediaType === 'video' ? '.mp4' : '.jpg';
+  return '.jpg';
 }
 
 async function ensureDir(dir) {

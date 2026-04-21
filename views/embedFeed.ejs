@@ -211,11 +211,11 @@
       'error',
       function (e) {
         var t = e.target;
-        if (!t) return;
-        if ((t.tagName === 'IMG' || t.tagName === 'VIDEO' || t.tagName === 'SOURCE') &&
-            t.closest && t.closest('.widget-thumb')) {
-          var media = t.tagName === 'SOURCE' ? t.parentNode : t;
-          replaceWithPlaceholder(media);
+        if (!t || !t.tagName) return;
+        var isMedia = t.tagName === 'IMG' || t.tagName === 'VIDEO' || t.tagName === 'SOURCE';
+        if (!isMedia || !t.closest) return;
+        if (t.closest('.widget-thumb') || t.closest('.post-modal__media')) {
+          replaceWithPlaceholder(t.tagName === 'SOURCE' ? t.parentNode : t);
         }
       },
       true
