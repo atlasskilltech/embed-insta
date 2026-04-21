@@ -56,7 +56,8 @@ async function embed(req, res, next) {
       Media.findByPostId(post.post_id),
       WidgetSettings.getActive(),
     ]);
-    res.set('X-Frame-Options', 'ALLOWALL');
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', "frame-ancestors *");
     res.render('embed', {
       title: 'Embed',
       post: postToPublic(post, media),
@@ -80,7 +81,8 @@ async function embedFeed(req, res, next) {
     const { rows } = await Post.listPosts({ page: 1, pageSize, username });
     const mediaByPost = await Media.findByPostIds(rows.map((r) => r.post_id));
     const posts = rows.map((r) => postToPublic(r, mediaByPost[r.post_id] || []));
-    res.set('X-Frame-Options', 'ALLOWALL');
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', "frame-ancestors *");
     res.render('embedFeed', {
       title: 'Embed Feed',
       posts,
