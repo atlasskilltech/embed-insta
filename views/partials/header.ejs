@@ -13,6 +13,11 @@
       <nav>
         <a href="/">Feed</a>
         <a href="/api/instagram/posts" target="_blank">API</a>
+        <% if (typeof admin !== 'undefined' && admin) { %>
+          <a href="/admin">Admin</a>
+        <% } else { %>
+          <a href="/admin/login">Admin</a>
+        <% } %>
       </nav>
     </div>
   </header>

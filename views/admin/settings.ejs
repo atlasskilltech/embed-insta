@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'settings'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1>Widget Design</h1>
+          <p class="muted">Customize how the embeddable feed looks on your site.</p>
+        </div>
+      </header>
+
+      <div class="panel-grid two-col">
+        <form method="POST" action="/admin/settings" class="stack panel-card" id="designForm">
+          <h2>Layout</h2>
+          <div class="row">
+            <label class="field">
+              <span>Layout</span>
+              <select name="layout">
+                <% ['grid', 'list', 'carousel'].forEach(function(opt){ %>
+                  <option value="<%= opt %>" <%= settings.layout === opt ? 'selected' : '' %>><%= opt %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="field">
+              <span>Columns</span>
+              <input type="number" name="columns" min="1" max="6" value="<%= settings.columns %>" />
+            </label>
+            <label class="field">
+              <span>Max items</span>
+              <input type="number" name="max_items" min="1" max="60" value="<%= settings.max_items %>" />
+            </label>
+          </div>
+
+          <div class="row">
+            <label class="field">
+              <span>Gap (px)</span>
+              <input type="number" name="gap" min="0" max="48" value="<%= settings.gap %>" />
+            </label>
+            <label class="field">
+              <span>Card radius (px)</span>
+              <input type="number" name="card_radius" min="0" max="40" value="<%= settings.card_radius %>" />
+            </label>
+          </div>
+
+          <h2>Colors</h2>
+          <div class="row">
+            <label class="field">
+              <span>Accent</span>
+              <input type="color" name="accent_color" value="<%= settings.accent_color %>" />
+            </label>
+            <label class="field">
+              <span>Background</span>
+              <input type="color" name="background" value="<%= settings.background %>" />
+            </label>
+            <label class="field">
+              <span>Text</span>
+              <input type="color" name="text_color" value="<%= settings.text_color %>" />
+            </label>
+            <label class="field">
+              <span>Border</span>
+              <input type="color" name="border_color" value="<%= settings.border_color %>" />
+            </label>
+          </div>
+
+          <h2>Typography & toggles</h2>
+          <label class="field">
+            <span>Font family</span>
+            <input type="text" name="font_family" value="<%= settings.font_family %>" />
+          </label>
+
+          <div class="row">
+            <label class="checkbox">
+              <input type="checkbox" name="show_username" <%= settings.show_username ? 'checked' : '' %> />
+              <span>Show username</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="show_caption" <%= settings.show_caption ? 'checked' : '' %> />
+              <span>Show caption</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="show_stats" <%= settings.show_stats ? 'checked' : '' %> />
+              <span>Show likes &amp; comments</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Save design</button>
+            <a class="btn btn-ghost" href="/admin/settings">Reset</a>
+          </div>
+        </form>
+
+        <aside class="panel-card">
+          <h2>Embed snippet</h2>
+          <p class="muted">Drop this on any site to render the styled feed.</p>
+          <pre class="code">&lt;iframe
+  src="<%= baseUrl %>/embed/feed"
+  width="100%"
+  height="640"
+  frameborder="0"
+  scrolling="no"
+  allowtransparency="true"&gt;&lt;/iframe&gt;</pre>
+          <h3>Current design</h3>
+          <ul class="kv">
+            <li><span>Layout</span><strong><%= settings.layout %></strong></li>
+            <li><span>Columns</span><strong><%= settings.columns %></strong></li>
+            <li><span>Accent</span><strong><span class="swatch" style="background: <%= settings.accent_color %>"></span> <%= settings.accent_color %></strong></li>
+            <li><span>Background</span><strong><span class="swatch" style="background: <%= settings.background %>"></span> <%= settings.background %></strong></li>
+            <li><span>Updated</span><strong><%= settings.updated_at || '—' %></strong></li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

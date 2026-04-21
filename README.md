@@ -22,8 +22,21 @@ cp .env.example .env
 # edit .env with your DB credentials, APIFY_TOKEN, and INSTAGRAM_TARGETS
 npm install
 npm run migrate       # creates the database + tables
+npm run create-admin  # interactive; or: --username=admin --password=... --force
 npm start             # starts server on PORT (default 3000)
 ```
+
+## Admin panel
+
+Visit `/admin/login` to sign in. Once authenticated admins can:
+
+- trigger Apify fetches (targets, limit, include comments, download media)
+- manage the embeddable widget design (layout, columns, gap, radius, colors,
+  font, toggles for username/caption/stats)
+- preview the embed snippet and copy it
+
+The widget styling is driven by the `widget_settings` table and applied to
+both `/embed/:postId` and `/embed/feed` (a multi-post embeddable feed).
 
 ### Manually trigger a scrape
 

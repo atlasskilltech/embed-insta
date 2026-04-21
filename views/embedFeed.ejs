@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/embed.css" />
+  <style>
+    :root {
+      --w-accent: <%= settings.accent_color %>;
+      --w-bg: <%= settings.background %>;
+      --w-fg: <%= settings.text_color %>;
+      --w-border: <%= settings.border_color %>;
+      --w-radius: <%= settings.card_radius %>px;
+      --w-gap: <%= settings.gap %>px;
+      --w-cols: <%= settings.columns %>;
+      --w-font: <%= settings.font_family %>;
+    }
+  </style>
+</head>
+<body class="embed-body themed layout-<%= settings.layout %>">
+  <% if (!posts.length) { %>
+    <p class="widget-empty">No posts yet.</p>
+  <% } %>
+  <div class="widget-feed widget-feed--<%= settings.layout %>">
+    <% posts.forEach(function(post) { %>
+      <a
+        class="widget-card"
+        href="<%= post.permalink || ('/post/' + post.post_id) %>"
+        target="_blank"
+        rel="noopener"
+      >
+        <div class="widget-thumb">
+          <% const cover = post.media[0]; %>
+          <% if (cover) { %>
+            <% if (cover.media_type === 'video') { %>
+              <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
+                <source src="<%= cover.local_url || cover.media_url %>" />
+              </video>
+            <% } else { %>
+              <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
+            <% } %>
+          <% } else { %>
+            <div class="widget-placeholder"></div>
+          <% } %>
+        </div>
+        <div class="widget-meta">
+          <% if (settings.show_username) { %>
+            <strong>@<%= post.username || 'unknown' %></strong>
+          <% } %>
+          <% if (settings.show_stats) { %>
+            <span class="widget-stats">
+              &hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %>
+            </span>
+          <% } %>
+          <% if (settings.show_caption && post.caption) { %>
+            <p class="widget-caption"><%= post.caption %></p>
+          <% } %>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+</body>
+</html>

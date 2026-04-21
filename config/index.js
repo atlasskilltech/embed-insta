@@ -25,6 +25,12 @@ module.exports = {
   baseUrl: process.env.BASE_URL || `http://localhost:${toInt(process.env.PORT, 3000)}`,
   apiKey: process.env.API_KEY || '',
 
+  admin: {
+    sessionSecret: process.env.ADMIN_SESSION_SECRET || 'change-me-in-production',
+    sessionMaxAgeMs: toInt(process.env.ADMIN_SESSION_MAX_AGE_MS, 1000 * 60 * 60 * 8),
+    cookieSecure: toBool(process.env.ADMIN_COOKIE_SECURE, false),
+  },
+
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: toInt(process.env.DB_PORT, 3306),
@@ -43,6 +49,7 @@ module.exports = {
   targets: toList(process.env.INSTAGRAM_TARGETS),
 
   fetchCron: process.env.FETCH_CRON || '',
+  fetchOnStart: toBool(process.env.FETCH_ON_START, false),
 
   media: {
     dir: mediaDir,

@@ -1,6 +1,7 @@
 const Post = require('../models/Post');
 const Media = require('../models/Media');
 const Comment = require('../models/Comment');
+const WidgetSettings = require('../models/WidgetSettings');
 const config = require('../config');
 const { postToPublic } = require('./apiController');
 
@@ -51,11 +52,15 @@ async function embed(req, res, next) {
   try {
     const post = await Post.findByPostId(req.params.postId);
     if (!post) return res.status(404).render('404', { title: 'Not found' });
-    const media = await Media.findByPostId(post.post_id);
+    const [media, settings] = await Promise.all([
+      Media.findByPostId(post.post_id),
+      WidgetSettings.getActive(),
+    ]);
     res.set('X-Frame-Options', 'ALLOWALL');
     res.render('embed', {
       title: 'Embed',
       post: postToPublic(post, media),
+      settings,
       baseUrl: config.baseUrl,
       layout: false,
     });
@@ -64,4 +69,28 @@ async function embed(req, res, next) {
   }
 }
 
-module.exports = { feed, postDetail, embed };
+async function embedFeed(req, res, next) {
+  try {
+    const settings = await WidgetSettings.getActive();
+    const pageSize = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || settings.max_items || 9, 1),
+      60
+    );
+    const username = req.query.username || null;
+    const { rows } = await Post.listPosts({ page: 1, pageSize, username });
+    const mediaByPost = await Media.findByPostIds(rows.map((r) => r.post_id));
+    const posts = rows.map((r) => postToPublic(r, mediaByPost[r.post_id] || []));
+    res.set('X-Frame-Options', 'ALLOWALL');
+    res.render('embedFeed', {
+      title: 'Embed Feed',
+      posts,
+      settings,
+      baseUrl: config.baseUrl,
+      layout: false,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { feed, postDetail, embed, embedFeed };
