@@ -47,22 +47,14 @@
   }
 
   function renderCover(post) {
-    const cover = post.media[0];
     var initial = (post.username || '?').slice(0, 1).toUpperCase();
-    // The grid is a preview, always render a still image. Prefer the
-    // locally-mirrored thumbnail, fall through to the per-media proxy,
-    // then the post-level cover proxy (Apify's item.displayUrl),
-    // finally a themed placeholder. No Instagram CDN URL leaks to the
-    // browser at any step.
-    var src =
-      (cover && (cover.local_thumbnail_url ||
-        cover.local_url ||
-        cover.proxy_thumbnail_url ||
-        cover.proxy_url)) ||
-      post.proxy_cover_url;
+    // Every tile in the grid uses the post-level displayUrl, streamed
+    // through /proxy/cover/:postId so the browser never sees an
+    // Instagram CDN URL (and its short-lived signed token).
+    var src = post.proxy_cover_url;
     if (!src) return placeholderTile(post);
 
-    var alt = shortAlt(cover.alt_text, post.username);
+    var alt = shortAlt(post.alt_text || post.caption, post.username);
     return (
       '<img class="w-media" loading="lazy"' +
       ' src="' + htmlAttr(src) + '"' +

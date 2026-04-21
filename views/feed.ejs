@@ -12,11 +12,7 @@
 <div class="grid">
   <% posts.forEach(function(post) { %>
     <%
-      const cover = post.media[0];
-      const coverSrc =
-        (cover && (cover.local_thumbnail_url || cover.local_url || cover.proxy_thumbnail_url || cover.proxy_url)) ||
-        post.proxy_cover_url ||
-        null;
+      const coverSrc = post.proxy_cover_url;
       const initial = (post.username || '?').slice(0, 1).toUpperCase();
     %>
     <a class="card" href="/post/<%= post.post_id %>">
