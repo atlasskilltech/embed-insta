@@ -100,6 +100,7 @@ async function settingsPage(req, res, next) {
       title: 'Widget Design',
       layout: false,
       settings,
+      layouts: WidgetSettings.LAYOUTS,
       baseUrl: config.baseUrl,
     });
   } catch (err) {
