@@ -18,7 +18,16 @@ const DEFAULTS = {
 };
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-const ALLOWED_LAYOUTS = new Set(['grid', 'list', 'carousel']);
+const LAYOUTS = [
+  { value: 'grid', label: 'Grid', description: 'Clean, balanced layout perfect for Instagram portfolios.' },
+  { value: 'masonry', label: 'Masonry', description: 'Staggered heights that work well for mixed media types.' },
+  { value: 'carousel', label: 'Carousel', description: 'Horizontal swipeable strip of cards.' },
+  { value: 'slider', label: 'Slider', description: 'Single-item slider with navigation arrows.' },
+  { value: 'social-wall', label: 'Social Wall', description: 'High-energy collage style for events and campaigns.' },
+  { value: 'single', label: 'Single Post', description: 'Highlights one featured post or announcement.' },
+  { value: 'list', label: 'List', description: 'Stacked full-width cards for reading feeds.' },
+];
+const ALLOWED_LAYOUTS = new Set(LAYOUTS.map((l) => l.value));
 
 function clampInt(value, min, max, fallback) {
   const n = parseInt(value, 10);
@@ -93,4 +102,4 @@ async function update(patch, userId = null) {
   return getActive();
 }
 
-module.exports = { DEFAULTS, getActive, update, sanitize };
+module.exports = { DEFAULTS, LAYOUTS, getActive, update, sanitize };

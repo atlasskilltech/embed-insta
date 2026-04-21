@@ -19,13 +19,91 @@
   </style>
 </head>
 <body class="embed-body themed layout-<%= settings.layout %>">
-  <% if (!posts.length) { %>
-    <p class="widget-empty">No posts yet.</p>
-  <% } %>
-  <div class="widget-feed widget-feed--<%= settings.layout %>">
-    <% posts.forEach(function(post) { %>
+<%
+  function cardFor(post) { return post; }
+  const layout = settings.layout || 'grid';
+  const visible = posts.slice(0, settings.max_items || 9);
+%>
+
+<% if (!visible.length) { %>
+  <p class="widget-empty">No posts yet.</p>
+<% } else if (layout === 'single') { %>
+  <% const post = visible[0]; const cover = post.media[0]; %>
+  <article class="widget-single widget-card">
+    <div class="widget-thumb widget-thumb--tall">
+      <% if (cover) { %>
+        <% if (cover.media_type === 'video') { %>
+          <video controls muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
+            <source src="<%= cover.local_url || cover.media_url %>" />
+          </video>
+        <% } else { %>
+          <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
+        <% } %>
+      <% } else { %>
+        <div class="widget-placeholder"></div>
+      <% } %>
+    </div>
+    <div class="widget-meta">
+      <% if (settings.show_username) { %>
+        <strong>@<%= post.username || 'unknown' %></strong>
+      <% } %>
+      <% if (settings.show_stats) { %>
+        <span class="widget-stats">&hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %></span>
+      <% } %>
+      <% if (settings.show_caption && post.caption) { %>
+        <p class="widget-caption widget-caption--full"><%= post.caption %></p>
+      <% } %>
+      <% if (post.permalink) { %>
+        <a class="view-link" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a>
+      <% } %>
+    </div>
+  </article>
+<% } else if (layout === 'slider') { %>
+  <div class="widget-slider" data-slider>
+    <button class="widget-slider__arrow widget-slider__arrow--prev" type="button" aria-label="Previous" data-slider-prev>&lsaquo;</button>
+    <div class="widget-slider__track" data-slider-track>
+      <% visible.forEach(function(post) { %>
+        <a
+          class="widget-card widget-slide"
+          href="<%= post.permalink || ('/post/' + post.post_id) %>"
+          target="_blank"
+          rel="noopener"
+        >
+          <div class="widget-thumb widget-thumb--tall">
+            <% const cover = post.media[0]; %>
+            <% if (cover) { %>
+              <% if (cover.media_type === 'video') { %>
+                <video muted playsinline preload="metadata" poster="<%= cover.thumbnail_url || '' %>">
+                  <source src="<%= cover.local_url || cover.media_url %>" />
+                </video>
+              <% } else { %>
+                <img loading="lazy" src="<%= cover.local_url || cover.media_url %>" alt="<%= cover.alt_text || '' %>" />
+              <% } %>
+            <% } else { %>
+              <div class="widget-placeholder"></div>
+            <% } %>
+          </div>
+          <div class="widget-meta">
+            <% if (settings.show_username) { %>
+              <strong>@<%= post.username || 'unknown' %></strong>
+            <% } %>
+            <% if (settings.show_stats) { %>
+              <span class="widget-stats">&hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %></span>
+            <% } %>
+            <% if (settings.show_caption && post.caption) { %>
+              <p class="widget-caption"><%= post.caption %></p>
+            <% } %>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+    <button class="widget-slider__arrow widget-slider__arrow--next" type="button" aria-label="Next" data-slider-next>&rsaquo;</button>
+  </div>
+<% } else { %>
+  <div class="widget-feed widget-feed--<%= layout %>">
+    <% visible.forEach(function(post, idx) { %>
       <a
-        class="widget-card"
+        class="widget-card <%= layout === 'social-wall' ? 'widget-card--tile-' + ((idx % 7) + 1) : '' %>"
         href="<%= post.permalink || ('/post/' + post.post_id) %>"
         target="_blank"
         rel="noopener"
@@ -49,9 +127,7 @@
             <strong>@<%= post.username || 'unknown' %></strong>
           <% } %>
           <% if (settings.show_stats) { %>
-            <span class="widget-stats">
-              &hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %>
-            </span>
+            <span class="widget-stats">&hearts; <%= post.likes_count %> &middot; &#128172; <%= post.comments_count %></span>
           <% } %>
           <% if (settings.show_caption && post.caption) { %>
             <p class="widget-caption"><%= post.caption %></p>
@@ -60,5 +136,24 @@
       </a>
     <% }) %>
   </div>
+<% } %>
+
+<% if (layout === 'slider') { %>
+  <script>
+    (function () {
+      var root = document.querySelector('[data-slider]');
+      if (!root) return;
+      var track = root.querySelector('[data-slider-track]');
+      var prev = root.querySelector('[data-slider-prev]');
+      var next = root.querySelector('[data-slider-next]');
+      function step(dir) {
+        var w = track.clientWidth;
+        track.scrollBy({ left: dir * w, behavior: 'smooth' });
+      }
+      prev.addEventListener('click', function () { step(-1); });
+      next.addEventListener('click', function () { step(1); });
+    })();
+  </script>
+<% } %>
 </body>
 </html>
