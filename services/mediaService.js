@@ -36,14 +36,29 @@ function sanitizeSegment(value, fallback) {
 }
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const CONTENT_TYPE_EXT = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/pjpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/heic': '.jpg', // served to browsers as jpg after CDN transform
+  'image/heif': '.jpg',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'video/webm': '.webm',
+  'application/octet-stream': null, // fall through
+};
 
-function guessExtension(url, mediaType) {
-  // Videos ALWAYS get .mp4. Instagram's video URLs can include ".png"
-  // or ".jpg" in their path (it's a CDN transform code, not the real
-  // media format) and saving MP4 bytes under those extensions makes
-  // express-static serve image/png, which <video> refuses to decode.
-  if (mediaType === 'video') return '.mp4';
+function extFromContentType(contentType) {
+  if (!contentType) return null;
+  const type = String(contentType).split(';')[0].trim().toLowerCase();
+  const mapped = CONTENT_TYPE_EXT[type];
+  return mapped === undefined ? null : mapped;
+}
 
+function extFromUrl(url) {
   try {
     const { pathname } = new URL(url);
     const ext = path.extname(pathname).toLowerCase();
@@ -51,7 +66,25 @@ function guessExtension(url, mediaType) {
   } catch (_) {
     /* ignore */
   }
-  return '.jpg';
+  return null;
+}
+
+function pickExtension({ mediaType, contentType, url }) {
+  // Videos always play from .mp4 on our side. Instagram's video URLs
+  // frequently contain ".png" in the path (a CDN transform code) so
+  // trusting the URL extension would mis-save the MP4 bytes.
+  if (mediaType === 'video') {
+    const fromCt = extFromContentType(contentType);
+    if (fromCt && fromCt !== '.jpg' && fromCt !== '.png' && fromCt !== '.webp') {
+      return fromCt;
+    }
+    return '.mp4';
+  }
+  // Images: prefer Content-Type (authoritative — Instagram's
+  // dst-jpg transform returns image/jpeg even for URLs ending in
+  // .png or .heic), then fall back to a whitelisted URL extension,
+  // then .jpg.
+  return extFromContentType(contentType) || extFromUrl(url) || '.jpg';
 }
 
 async function ensureDir(dir) {
@@ -69,43 +102,50 @@ function describeError(err) {
   return err.message || String(err);
 }
 
-async function downloadFile(url, destAbs) {
+async function downloadTo(url, absDir, baseName, mediaType) {
   let res;
   try {
     res = await downloader.get(url);
   } catch (err) {
-    // If the server answered with a non-2xx, axios still attaches the
-    // response stream — drain it so the TCP socket can be reused/closed
-    // instead of leaking listeners.
     const stream = err && err.response && err.response.data;
     if (stream && typeof stream.resume === 'function') stream.resume();
     throw new Error(describeError(err));
   }
 
+  const ext = pickExtension({
+    mediaType,
+    contentType: res.headers && res.headers['content-type'],
+    url,
+  });
+  const filename = `${baseName}${ext}`;
+  const absPath = path.join(absDir, filename);
+
   try {
-    await pipeline(res.data, fs.createWriteStream(destAbs));
+    await pipeline(res.data, fs.createWriteStream(absPath));
   } catch (err) {
     if (res.data && typeof res.data.resume === 'function') res.data.resume();
-    await fsp.rm(destAbs, { force: true }).catch(() => {});
+    await fsp.rm(absPath, { force: true }).catch(() => {});
     throw new Error(describeError(err));
   }
+
+  return { absPath, filename };
 }
 
 async function downloadMedia({ username, post_id, media_type, media_url, position }) {
   const user = sanitizeSegment(username, 'unknown');
   const pid = sanitizeSegment(post_id, 'post');
-  const ext = guessExtension(media_url, media_type);
-  const filename = `${position || 0}${ext}`;
+  const baseName = String(position || 0);
 
   const relDir = path.join(user, pid);
   const absDir = path.join(config.media.absDir, relDir);
   await ensureDir(absDir);
 
-  const absPath = path.join(absDir, filename);
-  const relPath = path.posix.join(relDir.split(path.sep).join('/'), filename);
-
   try {
-    await downloadFile(media_url, absPath);
+    const { filename } = await downloadTo(media_url, absDir, baseName, media_type);
+    const relPath = path.posix.join(
+      relDir.split(path.sep).join('/'),
+      filename
+    );
     return {
       local_path: relPath,
       public_url: `${config.media.urlPrefix}/${relPath}`,
