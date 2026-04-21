@@ -8,6 +8,7 @@ const POST_COLUMNS = [
   'owner_id',
   'caption',
   'alt_text',
+  'display_url',
   'permalink',
   'input_url',
   'post_type',

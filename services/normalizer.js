@@ -154,6 +154,7 @@ function normalize(item) {
     owner_id: ownerId,
     caption: item.caption || null,
     alt_text: item.alt || null,
+    display_url: item.displayUrl || null,
     permalink,
     input_url: item.inputUrl || null,
     post_type: pickType(item),
