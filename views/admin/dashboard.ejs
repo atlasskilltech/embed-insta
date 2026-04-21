@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+  <% const active = 'dashboard'; %>
+  <%- include('_chrome', { active: active, admin: admin, flash: flash }) %>
+
+  <main class="container admin-main">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="muted">Trigger Instagram fetches and monitor ingestion.</p>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Total posts</span>
+          <strong><%= stats.totalPosts %></strong>
+        </div>
+      </header>
+
+      <div class="panel-grid">
+        <div class="panel-card">
+          <h2>Fetch Instagram posts</h2>
+          <p class="muted">Runs the Apify scraper and stores new posts + media.</p>
+          <form method="POST" action="/admin/fetch" class="stack">
+            <label class="field">
+              <span>Targets (one per line, optional)</span>
+              <textarea
+                name="targets"
+                rows="3"
+                placeholder="https://www.instagram.com/instagram/"
+              ><%= (defaultTargets || []).join('\n') %></textarea>
+            </label>
+
+            <div class="row">
+              <label class="field">
+                <span>Results limit</span>
+                <input type="number" name="resultsLimit" min="1" max="200" value="20" />
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" name="includeComments" />
+                <span>Include comments</span>
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" name="downloadMedia" checked />
+                <span>Download media</span>
+              </label>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Start fetch</button>
+          </form>
+        </div>
+
+        <div class="panel-card">
+          <h2>Recent posts</h2>
+          <% if (!recent.length) { %>
+            <p class="muted">No posts yet. Trigger a fetch to get started.</p>
+          <% } else { %>
+            <ul class="recent-list">
+              <% recent.forEach(function(r) { %>
+                <li>
+                  <a href="/post/<%= r.post_id %>" target="_blank" rel="noopener">
+                    <strong>@<%= r.username || 'unknown' %></strong>
+                    <span class="muted"><%= r.posted_at || '' %></span>
+                  </a>
+                  <span class="muted small">
+                    <%= r.likes_count %> likes &middot; <%= r.comments_count %> comments
+                  </span>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

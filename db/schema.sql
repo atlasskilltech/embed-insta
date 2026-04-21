@@ -63,6 +63,46 @@ CREATE TABLE IF NOT EXISTS instagram_media (
   CONSTRAINT fk_media_post FOREIGN KEY (post_id) REFERENCES instagram_posts (post_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS admin_users (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username      VARCHAR(64)   NOT NULL,
+  email         VARCHAR(191)  NULL,
+  password_hash VARCHAR(255)  NOT NULL,
+  display_name  VARCHAR(128)  NULL,
+  is_active     TINYINT(1)    NOT NULL DEFAULT 1,
+  last_login_at DATETIME      NULL,
+  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_admin_username (username),
+  UNIQUE KEY uq_admin_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS widget_settings (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name            VARCHAR(64)   NOT NULL DEFAULT 'default',
+  layout          VARCHAR(16)   NOT NULL DEFAULT 'grid',
+  columns         TINYINT UNSIGNED NOT NULL DEFAULT 3,
+  card_radius     TINYINT UNSIGNED NOT NULL DEFAULT 8,
+  gap             TINYINT UNSIGNED NOT NULL DEFAULT 12,
+  show_caption    TINYINT(1)    NOT NULL DEFAULT 1,
+  show_stats      TINYINT(1)    NOT NULL DEFAULT 1,
+  show_username   TINYINT(1)    NOT NULL DEFAULT 1,
+  accent_color    VARCHAR(16)   NOT NULL DEFAULT '#0095f6',
+  background      VARCHAR(16)   NOT NULL DEFAULT '#ffffff',
+  text_color      VARCHAR(16)   NOT NULL DEFAULT '#262626',
+  border_color    VARCHAR(16)   NOT NULL DEFAULT '#dbdbdb',
+  font_family     VARCHAR(128)  NOT NULL DEFAULT 'system-ui',
+  max_items       SMALLINT UNSIGNED NOT NULL DEFAULT 9,
+  updated_by      BIGINT UNSIGNED NULL,
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_widget_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO widget_settings (name) VALUES ('default');
+
 CREATE TABLE IF NOT EXISTS instagram_comments (
   id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   post_id         VARCHAR(64)   NOT NULL,

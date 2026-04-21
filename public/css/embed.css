@@ -74,3 +74,116 @@ html, body {
   font-weight: 600;
   text-decoration: none;
 }
+
+/* ---------- Themed widget (driven by WidgetSettings) ---------- */
+
+.embed-body.themed {
+  background: transparent;
+  color: var(--w-fg, #262626);
+  font-family: var(--w-font, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif);
+}
+
+.embed-body.themed .embed-card {
+  background: var(--w-bg, #fff);
+  border-color: var(--w-border, #dbdbdb);
+  border-radius: var(--w-radius, 8px);
+}
+
+.embed-body.themed .view-link { color: var(--w-accent, #0095f6); }
+
+.widget-feed {
+  display: grid;
+  grid-template-columns: repeat(var(--w-cols, 3), minmax(0, 1fr));
+  gap: var(--w-gap, 12px);
+  padding: 8px;
+}
+
+.widget-feed--list {
+  grid-template-columns: 1fr;
+}
+
+.widget-feed--carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 8px;
+  gap: var(--w-gap, 12px);
+}
+
+.widget-feed--carousel .widget-card {
+  flex: 0 0 220px;
+  scroll-snap-align: start;
+}
+
+.widget-card {
+  background: var(--w-bg, #fff);
+  color: inherit;
+  border: 1px solid var(--w-border, #dbdbdb);
+  border-radius: var(--w-radius, 8px);
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.1s ease-out, box-shadow 0.15s ease;
+}
+
+.widget-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.widget-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.widget-thumb img,
+.widget-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.widget-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #eee, #ccc);
+}
+
+.widget-meta {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.widget-stats { color: var(--w-accent, #0095f6); font-weight: 600; }
+
+.widget-caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: inherit;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.widget-empty {
+  text-align: center;
+  color: #8e8e8e;
+  padding: 40px 0;
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .widget-feed { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

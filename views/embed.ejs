@@ -5,16 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Embed &middot; @<%= post.username || 'post' %></title>
   <link rel="stylesheet" href="/static/css/embed.css" />
+  <style>
+    :root {
+      --w-accent: <%= settings.accent_color %>;
+      --w-bg: <%= settings.background %>;
+      --w-fg: <%= settings.text_color %>;
+      --w-border: <%= settings.border_color %>;
+      --w-radius: <%= settings.card_radius %>px;
+      --w-font: <%= settings.font_family %>;
+    }
+  </style>
 </head>
-<body class="embed-body">
+<body class="embed-body themed">
   <article class="embed-card">
-    <header class="embed-head">
-      <div class="avatar"><%= (post.username || '?').slice(0, 1).toUpperCase() %></div>
-      <div class="who">
-        <strong>@<%= post.username || 'unknown' %></strong>
-        <% if (post.owner_full_name) { %><span><%= post.owner_full_name %></span><% } %>
-      </div>
-    </header>
+    <% if (settings.show_username) { %>
+      <header class="embed-head">
+        <div class="avatar"><%= (post.username || '?').slice(0, 1).toUpperCase() %></div>
+        <div class="who">
+          <strong>@<%= post.username || 'unknown' %></strong>
+          <% if (post.owner_full_name) { %><span><%= post.owner_full_name %></span><% } %>
+        </div>
+      </header>
+    <% } %>
 
     <div class="embed-media">
       <% const first = post.media[0]; %>
@@ -30,12 +42,14 @@
     </div>
 
     <footer class="embed-foot">
-      <div class="stats">
-        <span>&hearts; <%= post.likes_count %></span>
-        <span>&#128172; <%= post.comments_count %></span>
-        <% if (post.video_view_count) { %><span>&#128065; <%= post.video_view_count.toLocaleString() %></span><% } %>
-      </div>
-      <% if (post.caption) { %>
+      <% if (settings.show_stats) { %>
+        <div class="stats">
+          <span>&hearts; <%= post.likes_count %></span>
+          <span>&#128172; <%= post.comments_count %></span>
+          <% if (post.video_view_count) { %><span>&#128065; <%= post.video_view_count.toLocaleString() %></span><% } %>
+        </div>
+      <% } %>
+      <% if (settings.show_caption && post.caption) { %>
         <p class="caption"><%= post.caption %></p>
       <% } %>
       <% if (post.location) { %>

@@ -1,0 +1,28 @@
+<header class="admin-header">
+  <div class="admin-bar">
+    <a class="admin-brand" href="/admin">
+      <span class="logo-dot"></span>
+      <strong>Embed Insta</strong>
+      <small>Admin</small>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a>
+      <a href="/admin/settings" class="<%= active === 'settings' ? 'active' : '' %>">Widget Design</a>
+      <a href="/" target="_blank" rel="noopener">View Site &rarr;</a>
+    </nav>
+    <div class="admin-user">
+      <% if (admin) { %>
+        <span class="muted">Hi, <strong><%= admin.displayName %></strong></span>
+        <form method="POST" action="/admin/logout" class="inline">
+          <button type="submit" class="btn btn-ghost">Log out</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</header>
+
+<% if (typeof flash !== 'undefined' && flash) { %>
+  <div class="container">
+    <div class="alert alert-<%= flash.type %>"><%= flash.message %></div>
+  </div>
+<% } %>
