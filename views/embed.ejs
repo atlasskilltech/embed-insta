@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Embed &middot; @<%= post.username || 'post' %></title>
+  <link rel="stylesheet" href="/static/css/embed.css" />
+</head>
+<body class="embed-body">
+  <article class="embed-card">
+    <header class="embed-head">
+      <div class="avatar"><%= (post.username || '?').slice(0, 1).toUpperCase() %></div>
+      <div class="who">
+        <strong>@<%= post.username || 'unknown' %></strong>
+        <% if (post.owner_full_name) { %><span><%= post.owner_full_name %></span><% } %>
+      </div>
+    </header>
+
+    <div class="embed-media">
+      <% const first = post.media[0]; %>
+      <% if (first) { %>
+        <% if (first.media_type === 'video') { %>
+          <video controls playsinline preload="metadata" poster="<%= first.thumbnail_url || '' %>">
+            <source src="<%= first.local_url || first.media_url %>" />
+          </video>
+        <% } else { %>
+          <img src="<%= first.local_url || first.media_url %>" alt="<%= first.alt_text || '' %>" />
+        <% } %>
+      <% } %>
+    </div>
+
+    <footer class="embed-foot">
+      <div class="stats">
+        <span>&hearts; <%= post.likes_count %></span>
+        <span>&#128172; <%= post.comments_count %></span>
+        <% if (post.video_view_count) { %><span>&#128065; <%= post.video_view_count.toLocaleString() %></span><% } %>
+      </div>
+      <% if (post.caption) { %>
+        <p class="caption"><%= post.caption %></p>
+      <% } %>
+      <% if (post.location) { %>
+        <p class="location">&#128205; <%= post.location.name %></p>
+      <% } %>
+      <% if (post.permalink) { %>
+        <a class="view-link" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a>
+      <% } %>
+    </footer>
+  </article>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<%- include('partials/header') %>
+
+<article class="post-detail">
+  <header class="post-head">
+    <div>
+      <h1>@<%= post.username || 'unknown' %></h1>
+      <% if (post.owner_full_name) { %><p class="muted"><%= post.owner_full_name %></p><% } %>
+    </div>
+    <div class="post-head-meta">
+      <% if (post.posted_at) { %><time><%= post.posted_at %></time><% } %>
+      <% if (post.location) { %>
+        <p class="muted">&#128205; <%= post.location.name %></p>
+      <% } %>
+    </div>
+  </header>
+
+  <div class="post-media">
+    <% post.media.forEach(function(m) { %>
+      <% if (m.media_type === 'video') { %>
+        <video controls playsinline preload="metadata" poster="<%= m.thumbnail_url || '' %>">
+          <source src="<%= m.local_url || m.media_url %>" />
+        </video>
+      <% } else { %>
+        <img src="<%= m.local_url || m.media_url %>" alt="<%= m.alt_text || '' %>" />
+      <% } %>
+    <% }) %>
+  </div>
+
+  <% if (post.caption) { %>
+    <p class="caption"><%= post.caption %></p>
+  <% } %>
+
+  <% if (post.hashtags && post.hashtags.length) { %>
+    <p class="tags">
+      <% post.hashtags.forEach(function(h) { %><span class="tag">#<%= h %></span> <% }) %>
+    </p>
+  <% } %>
+
+  <dl class="stats">
+    <div><dt>Likes</dt><dd><%= post.likes_count %></dd></div>
+    <div><dt>Comments</dt><dd><%= post.comments_count %></dd></div>
+    <div><dt>Type</dt><dd><%= post.post_type %><%= post.product_type ? ' / ' + post.product_type : '' %></dd></div>
+    <% if (post.video_view_count) { %>
+      <div><dt>Video views</dt><dd><%= post.video_view_count.toLocaleString() %></dd></div>
+    <% } %>
+    <% if (post.video_play_count) { %>
+      <div><dt>Plays</dt><dd><%= post.video_play_count.toLocaleString() %></dd></div>
+    <% } %>
+    <% if (post.video_duration) { %>
+      <div><dt>Duration</dt><dd><%= post.video_duration.toFixed(1) %>s</dd></div>
+    <% } %>
+  </dl>
+
+  <% if (post.music) { %>
+    <p class="muted">&#127925; <%= post.music.song %> &middot; <%= post.music.artist %></p>
+  <% } %>
+
+  <% if (post.tagged_users && post.tagged_users.length) { %>
+    <section class="tagged">
+      <h3>Tagged</h3>
+      <ul>
+        <% post.tagged_users.forEach(function(u) { %>
+          <li>@<%= u.username %><%= u.is_verified ? ' &#10004;' : '' %></li>
+        <% }) %>
+      </ul>
+    </section>
+  <% } %>
+
+  <div class="actions">
+    <% if (post.permalink) { %><a class="btn" href="<%= post.permalink %>" target="_blank" rel="noopener">View on Instagram</a><% } %>
+    <a class="btn btn-secondary" href="<%= post.embed_url %>" target="_blank">Open Embed</a>
+  </div>
+
+  <% if (post.comments && post.comments.length) { %>
+    <section class="comments">
+      <h3>Comments (<%= post.comments.length %>)</h3>
+      <ul>
+        <% post.comments.filter(function(c){return !c.parent_comment_id;}).forEach(function(c) { %>
+          <li>
+            <strong>@<%= c.owner_username || 'user' %></strong>
+            <span><%= c.text %></span>
+            <% if (c.likes_count > 0) { %><em>&hearts; <%= c.likes_count %></em><% } %>
+            <% const replies = post.comments.filter(function(r){return r.parent_comment_id === c.id;}); %>
+            <% if (replies.length) { %>
+              <ul class="replies">
+                <% replies.forEach(function(r) { %>
+                  <li>
+                    <strong>@<%= r.owner_username || 'user' %></strong>
+                    <span><%= r.text %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    </section>
+  <% } %>
+
+  <section class="embed-code">
+    <h3>Embed code</h3>
+    <pre><code>&lt;iframe src="<%= post.embed_url %>" width="540" height="720" frameborder="0" scrolling="no"&gt;&lt;/iframe&gt;</code></pre>
+  </section>
+</article>
+
+<%- include('partials/footer') %>
