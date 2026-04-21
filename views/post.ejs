@@ -15,13 +15,23 @@
   </header>
 
   <div class="post-media">
+    <%
+      const initial = (post.username || '?').slice(0, 1).toUpperCase();
+    %>
     <% post.media.forEach(function(m) { %>
-      <% if (m.media_type === 'video') { %>
-        <video controls playsinline preload="metadata" poster="<%= m.thumbnail_url || '' %>">
-          <source src="<%= m.local_url || m.media_url %>" />
+      <% if (m.media_type === 'video' && m.local_url) { %>
+        <video controls playsinline preload="metadata" poster="<%= m.local_thumbnail_url || '' %>">
+          <source src="<%= m.local_url %>" />
         </video>
       <% } else { %>
-        <img src="<%= m.local_url || m.media_url %>" alt="<%= m.alt_text || '' %>" />
+        <%
+          const src = m.local_url || m.local_thumbnail_url;
+        %>
+        <% if (src) { %>
+          <img src="<%= src %>" alt="<%= m.alt_text || '' %>" data-fallback-initial="<%= initial %>" />
+        <% } else { %>
+          <div class="placeholder placeholder--gradient"><span><%= initial %></span></div>
+        <% } %>
       <% } %>
     <% }) %>
   </div>
@@ -102,5 +112,26 @@
     <pre><code>&lt;iframe src="<%= post.embed_url %>" width="540" height="720" frameborder="0" scrolling="no"&gt;&lt;/iframe&gt;</code></pre>
   </section>
 </article>
+
+<script>
+  (function () {
+    document.addEventListener(
+      'error',
+      function (e) {
+        var t = e.target;
+        if (!t || t.tagName !== 'IMG' || !t.closest) return;
+        if (!t.closest('.post-media')) return;
+        var initial = (t.dataset && t.dataset.fallbackInitial) || '?';
+        var ph = document.createElement('div');
+        ph.className = 'placeholder placeholder--gradient';
+        var span = document.createElement('span');
+        span.textContent = initial;
+        ph.appendChild(span);
+        t.parentNode.replaceChild(ph, t);
+      },
+      true
+    );
+  })();
+</script>
 
 <%- include('partials/footer') %>
